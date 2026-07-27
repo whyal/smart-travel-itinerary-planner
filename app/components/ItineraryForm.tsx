@@ -13,7 +13,16 @@ import {
   FileText,
   AlertCircle,
   Trash2,
+  Compass,
+  CheckCircle2,
+  Layers,
 } from "lucide-react";
+import ItineraryHistory, {
+  SavedItineraryItem,
+  getHistoryList,
+  saveToHistory,
+  deleteFromHistory,
+} from "./ItineraryHistory";
 
 // Matches the Spring AI Java Record structure
 interface Activity {
@@ -48,6 +57,8 @@ export default function ItineraryForm() {
   const [error, setError] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"structured" | "raw">("structured");
+  const [selectedDayFilter, setSelectedDayFilter] = useState<number | "all">("all");
+  const [historyList, setHistoryList] = useState<SavedItineraryItem[]>([]);
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const streamEndRef = useRef<HTMLDivElement | null>(null);
@@ -61,6 +72,10 @@ export default function ItineraryForm() {
         localStorage.setItem("itinerary_conversation_id", savedId);
       }
       setConversationId(savedId);
+
+      // Load saved itinerary history list
+      const history = getHistoryList();
+      setHistoryList(history);
 
       // Restore previously generated itinerary for this session from localStorage
       const cached = localStorage.getItem(`itinerary_saved_${savedId}`);
@@ -76,6 +91,25 @@ export default function ItineraryForm() {
       }
     }
   }, []);
+
+  const handleSelectHistoryItem = (item: SavedItineraryItem) => {
+    setConversationId(item.id);
+    setItinerary(item.itinerary);
+    setFormData(item.formData);
+    setStreamedText(item.streamedText);
+    setSelectedDayFilter("all");
+    setActiveTab("structured");
+    setError(null);
+  };
+
+  const handleDeleteHistoryItem = (id: string) => {
+    const updated = deleteFromHistory(id);
+    setHistoryList(updated);
+    if (conversationId === id) {
+      setItinerary(null);
+      setStreamedText("");
+    }
+  };
 
   // Helper to persist current session output to localStorage
   const saveSessionCache = (
@@ -149,6 +183,7 @@ Generate a ${formData.days}-day itinerary matching these constraints.`;
     setStreamedText("");
     setItinerary(null);
     setError(null);
+    setSelectedDayFilter("all");
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -257,6 +292,17 @@ Generate a ${formData.days}-day itinerary matching these constraints.`;
 
       // Persist results in localStorage
       saveSessionCache(finalParsedItinerary, accumulatedText, formData, currentSessionId);
+      if (finalParsedItinerary) {
+        const newItem: SavedItineraryItem = {
+          id: currentSessionId,
+          createdAt: Date.now(),
+          formData: { ...formData },
+          itinerary: finalParsedItinerary,
+          streamedText: accumulatedText,
+        };
+        const updatedHistory = saveToHistory(newItem);
+        setHistoryList(updatedHistory);
+      }
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") {
         console.log("Stream generation stopped by user.");
@@ -295,15 +341,23 @@ Generate a ${formData.days}-day itinerary matching these constraints.`;
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={handleResetSession}
-            title="Reset Session UUID & Start Fresh"
-            className="flex items-center space-x-1 text-xs text-slate-500 hover:text-blue-600 border border-slate-200 hover:border-blue-300 rounded-lg px-2.5 py-1.5 transition-colors"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">New Session</span>
-          </button>
+          <div className="flex items-center space-x-2">
+            <ItineraryHistory
+              historyList={historyList}
+              currentId={conversationId}
+              onSelect={handleSelectHistoryItem}
+              onDelete={handleDeleteHistoryItem}
+            />
+            <button
+              type="button"
+              onClick={handleResetSession}
+              title="Reset Session UUID & Start Fresh"
+              className="flex items-center space-x-1 text-xs text-slate-600 hover:text-blue-600 border border-slate-200 hover:border-blue-300 rounded-xl px-3 py-2 transition-colors font-semibold bg-white shadow-2xs hover:shadow-xs"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">New Session</span>
+            </button>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -444,8 +498,8 @@ Generate a ${formData.days}-day itinerary matching these constraints.`;
             </div>
 
             <div className="flex items-center space-x-2">
-              {/* Tab selector if structured itinerary exists */}
-              {itinerary && (
+              {/* Tab selector if structured itinerary or streamed text exists */}
+              {(itinerary || streamedText) && (
                 <div className="flex bg-slate-200/70 p-1 rounded-xl text-xs font-semibold">
                   <button
                     onClick={() => setActiveTab("structured")}
@@ -456,7 +510,7 @@ Generate a ${formData.days}-day itinerary matching these constraints.`;
                     }`}
                   >
                     <FileText className="w-3.5 h-3.5" />
-                    <span>Formatted Card</span>
+                    <span>Formatted View</span>
                   </button>
                   <button
                     onClick={() => setActiveTab("raw")}
@@ -488,64 +542,202 @@ Generate a ${formData.days}-day itinerary matching these constraints.`;
 
           {/* Body Content */}
           <div className="p-6 sm:p-8">
-            {activeTab === "structured" && itinerary ? (
-              <div className="space-y-8">
-                <div className="border-b border-slate-100 pb-4">
-                  <h3 className="text-2xl font-extrabold text-slate-900 flex items-center space-x-2">
-                    <span>{itinerary.destination} Itinerary</span>
-                  </h3>
-                  <p className="text-sm text-slate-500 mt-1">
-                    Customized {itinerary.days.length}-day travel plan based on your preferences.
-                  </p>
-                </div>
-
-                <div className="space-y-6">
-                  {itinerary.days.map((day) => (
-                    <div
-                      key={day.dayNumber}
-                      className="bg-slate-50/70 rounded-2xl p-5 border border-slate-200/80 hover:border-blue-200 transition"
-                    >
-                      <div className="flex items-center space-x-3 mb-4">
-                        <div className="px-3 py-1 bg-blue-600 text-white rounded-lg text-xs font-bold uppercase tracking-wider flex items-center space-x-1">
-                          <Calendar className="w-3.5 h-3.5" />
-                          <span>Day {day.dayNumber}</span>
+            {activeTab === "structured" ? (
+              itinerary ? (
+                <div className="space-y-6 animate-fade-in">
+                  {/* Summary & Day Filter Header Card */}
+                  <div className="border-b border-slate-100 pb-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <span className="px-2.5 py-0.5 bg-blue-100 text-blue-700 font-semibold text-xs rounded-md">
+                            {itinerary.days.length} Days Itinerary
+                          </span>
+                          <span className="text-slate-300">•</span>
+                          <span className="text-xs font-medium text-slate-500">{formData.pace} Pace</span>
                         </div>
-                        <h4 className="text-lg font-bold text-slate-800">
-                          {day.theme}
-                        </h4>
-                      </div>
-
-                      <div className="space-y-3 pl-2 sm:pl-4">
-                        {day.activities.map((act, index) => (
-                          <div
-                            key={index}
-                            className="flex items-start space-x-3 p-3 bg-white rounded-xl border border-slate-100 shadow-xs"
-                          >
-                            <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg shrink-0 mt-0.5">
-                              <Clock className="w-4 h-4" />
-                            </div>
-                            <div className="space-y-0.5 text-sm">
-                              <div className="flex items-center space-x-2">
-                                <span className="font-semibold text-blue-600 font-mono text-xs">
-                                  {act.time}
-                                </span>
-                                <span className="text-slate-300">•</span>
-                                <span className="font-bold text-slate-900 flex items-center space-x-1">
-                                  <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                                  <span>{act.location}</span>
-                                </span>
-                              </div>
-                              <p className="text-slate-600 leading-relaxed pt-0.5">
-                                {act.description}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
+                        <h3 className="text-2xl font-extrabold text-slate-900 mt-1">
+                          {itinerary.destination} Travel Plan
+                        </h3>
                       </div>
                     </div>
-                  ))}
+
+                    {/* Day Selector Tabs */}
+                    <div className="mt-5 flex items-center gap-2 overflow-x-auto pb-1">
+                      <button
+                        onClick={() => setSelectedDayFilter("all")}
+                        className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shrink-0 ${
+                          selectedDayFilter === "all"
+                            ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        }`}
+                      >
+                        <Layers className="w-3.5 h-3.5" />
+                        <span>All Days ({itinerary.days.length})</span>
+                      </button>
+                      {itinerary.days.map((day) => (
+                        <button
+                          key={day.dayNumber}
+                          onClick={() => setSelectedDayFilter(day.dayNumber)}
+                          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+                            selectedDayFilter === day.dayNumber
+                              ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                          }`}
+                        >
+                          Day {day.dayNumber}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Individual Day Cards Container */}
+                  <div className="space-y-6">
+                    {itinerary.days
+                      .filter((day) => selectedDayFilter === "all" || selectedDayFilter === day.dayNumber)
+                      .map((day) => (
+                        <div
+                          key={day.dayNumber}
+                          className="bg-white rounded-2xl shadow-lg border border-slate-200/70 overflow-hidden hover:shadow-xl transition-all duration-200"
+                        >
+                          {/* Individual Day Header */}
+                          <div className="p-5 sm:p-6 bg-gradient-to-r from-slate-900 to-slate-800 text-white flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div className="px-3 py-1 bg-blue-500 text-white rounded-lg text-xs font-extrabold uppercase tracking-wider flex items-center space-x-1">
+                                <Calendar className="w-3.5 h-3.5" />
+                                <span>Day {day.dayNumber}</span>
+                              </div>
+                              <h4 className="text-base sm:text-lg font-bold text-white">
+                                {day.theme}
+                              </h4>
+                            </div>
+                            <span className="text-xs font-semibold text-slate-300 bg-slate-800/90 px-2.5 py-1 rounded-lg border border-slate-700 shrink-0">
+                              {day.activities.length} Activities
+                            </span>
+                          </div>
+
+                          {/* Individual Day Activities List */}
+                          <div className="p-5 sm:p-6 space-y-3.5 bg-slate-50/40">
+                            {day.activities.map((act, index) => (
+                              <div
+                                key={index}
+                                className="flex items-start space-x-3.5 p-4 bg-white rounded-xl border border-slate-200/80 shadow-2xs hover:border-blue-300 hover:shadow-xs transition"
+                              >
+                                <div className="p-2 bg-blue-50 text-blue-600 rounded-xl shrink-0 mt-0.5">
+                                  <Clock className="w-4 h-4" />
+                                </div>
+                                <div className="space-y-1 text-sm flex-1">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="font-bold text-blue-600 font-mono text-xs bg-blue-50 px-2 py-0.5 rounded-md">
+                                      {act.time}
+                                    </span>
+                                    <span className="text-slate-300">•</span>
+                                    <span className="font-bold text-slate-900 flex items-center space-x-1">
+                                      <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                      <span>{act.location}</span>
+                                    </span>
+                                  </div>
+                                  <p className="text-slate-600 leading-relaxed text-sm pt-0.5">
+                                    {act.description}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
                 </div>
-              </div>
+              ) : loading ? (
+                /* User-friendly loading state during generation */
+                <div className="space-y-6">
+                  {/* Loading Card Header */}
+                  <div className="p-6 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 rounded-2xl border border-blue-100/80 shadow-xs relative overflow-hidden">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center space-x-4">
+                        <div className="p-3 bg-white text-blue-600 rounded-2xl shadow-md border border-blue-100 shrink-0">
+                          <Compass className="w-7 h-7 animate-spin" style={{ animationDuration: "8s" }} />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold text-slate-900">
+                            Crafting Your {formData.destination || "Travel"} Plan...
+                          </h3>
+                          <p className="text-xs text-slate-600 mt-1 flex items-center gap-2">
+                            <span>{formData.days} Days</span> • <span>{formData.pace} Pace</span> • <span>{formData.budget} Budget</span>
+                          </p>
+                        </div>
+                      </div>
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 animate-pulse">
+                        Generating AI Plan
+                      </span>
+                    </div>
+
+                    {/* Dynamic Progress Steps */}
+                    <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+                      <div className="flex items-center space-x-2 p-2.5 bg-white/80 rounded-xl border border-blue-100 shadow-2xs">
+                        <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                        <span className="font-medium text-slate-700">Analyzing preferences</span>
+                      </div>
+                      <div className="flex items-center space-x-2 p-2.5 bg-white/80 rounded-xl border border-blue-100 shadow-2xs">
+                        <Loader2 className="w-4 h-4 text-indigo-600 animate-spin shrink-0" />
+                        <span className="font-medium text-slate-700">Curating activities</span>
+                      </div>
+                      <div className="flex items-center space-x-2 p-2.5 bg-white/50 rounded-xl border border-dashed border-slate-200 text-slate-400">
+                        <Clock className="w-4 h-4 shrink-0" />
+                        <span className="font-medium">Finalizing day schedule</span>
+                      </div>
+                    </div>
+
+                    {/* Stream Byte Progress */}
+                    <div className="mt-4 flex items-center justify-between text-xs text-slate-500 font-mono">
+                      <div className="flex items-center space-x-2">
+                        <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
+                        <span>Receiving streamed response...</span>
+                      </div>
+                      <span>{streamedText.length} chars</span>
+                    </div>
+                  </div>
+
+                  {/* Skeleton Itinerary Preview */}
+                  <div className="space-y-4">
+                    {Array.from({ length: Math.min(Number(formData.days) || 3, 3) }).map((_, dayIdx) => (
+                      <div
+                        key={dayIdx}
+                        className="bg-slate-50/70 rounded-2xl p-5 border border-slate-200/80 space-y-4 animate-pulse"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className="h-6 w-16 bg-blue-200/80 rounded-lg" />
+                          <div className="h-5 w-48 bg-slate-200/80 rounded-md" />
+                        </div>
+
+                        <div className="space-y-3 pl-2 sm:pl-4">
+                          {[1, 2].map((actIdx) => (
+                            <div
+                              key={actIdx}
+                              className="flex items-start space-x-3 p-3 bg-white rounded-xl border border-slate-100"
+                            >
+                              <div className="w-7 h-7 bg-slate-100 rounded-lg shrink-0" />
+                              <div className="space-y-2 flex-1">
+                                <div className="flex items-center space-x-2">
+                                  <div className="h-3 w-16 bg-blue-100 rounded" />
+                                  <div className="h-3 w-28 bg-slate-200 rounded" />
+                                </div>
+                                <div className="h-3 w-4/5 bg-slate-100 rounded" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                  <AlertCircle className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                  <p className="text-slate-700 font-semibold">Response completed</p>
+                  <p className="text-xs text-slate-500 mt-1">Switch to "Raw Stream" tab to view raw output.</p>
+                </div>
+              )
             ) : (
               /* Streaming Log / Raw View */
               <div className="space-y-3">
