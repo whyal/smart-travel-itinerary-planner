@@ -16,6 +16,9 @@ import {
   Compass,
   CheckCircle2,
   Layers,
+  Database,
+  Check,
+  X,
 } from "lucide-react";
 import ItineraryHistory, {
   SavedItineraryItem,
@@ -42,6 +45,160 @@ interface ItineraryResponse {
   days: DayPlan[];
 }
 
+function isValidItinerary(obj: any): boolean {
+  if (!obj || typeof obj !== "object") return false;
+  const dest = obj.destination || obj.Destination || obj.city || obj.location;
+  const days = obj.days || obj.Days || obj.dayPlans || obj.dailyPlans || obj.itinerary;
+  return Boolean(dest || (Array.isArray(days) && days.length > 0));
+}
+
+function normalizeItinerary(obj: any, defaultDestination: string): ItineraryResponse {
+  const dest =
+    obj.destination ||
+    obj.Destination ||
+    obj.city ||
+    obj.location ||
+    defaultDestination ||
+    "Trip Plan";
+
+  const rawDays =
+    obj.days ||
+    obj.Days ||
+    obj.dayPlans ||
+    obj.dailyPlans ||
+    obj.itinerary ||
+    [];
+
+  const days: DayPlan[] = Array.isArray(rawDays)
+    ? rawDays.map((d: any, idx: number) => ({
+        dayNumber: Number(d.dayNumber ?? d.day ?? d.day_number ?? idx + 1),
+        theme: String(d.theme || d.title || d.heading || d.summary || `Day ${idx + 1}`),
+        activities: Array.isArray(d.activities || d.plan || d.events)
+          ? (d.activities || d.plan || d.events).map((a: any) => ({
+              time: String(a.time || a.timeOfDay || a.hour || "Flexible"),
+              location: String(a.location || a.place || a.spot || dest),
+              description: String(
+                a.description || a.details || a.activity || (typeof a === "string" ? a : "")
+              ),
+            }))
+          : [],
+      }))
+    : [];
+
+  return {
+    destination: String(dest),
+    days,
+  };
+}
+
+function parseMarkdownItinerary(text: string, defaultDestination: string): ItineraryResponse | null {
+  if (!text || text.trim().length < 20) return null;
+
+  const lines = text.split("\n");
+  const days: DayPlan[] = [];
+  let currentDay: DayPlan | null = null;
+  let currentActivity: Activity | null = null;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+
+    const dayMatch = line.match(/^(?:#+\s*)?Day\s*(\d+)[:\s-]*(.*)$/i);
+    if (dayMatch) {
+      if (currentDay) {
+        if (currentActivity) currentDay.activities.push(currentActivity);
+        days.push(currentDay);
+      }
+      currentDay = {
+        dayNumber: parseInt(dayMatch[1], 10),
+        theme: dayMatch[2].replace(/^[:\s-]+/, "").trim() || `Day ${dayMatch[1]} Highlights`,
+        activities: [],
+      };
+      currentActivity = null;
+      continue;
+    }
+
+    if (currentDay) {
+      const timeMatch = line.match(/^(?:[-*•]\s*)?\(?(\d{1,2}:\d{2}\s*(?:AM|PM)?|\d{1,2}\s*(?:AM|PM)|Morning|Afternoon|Evening)\)?[:\s-]*(.*)$/i);
+      if (timeMatch) {
+        if (currentActivity) currentDay.activities.push(currentActivity);
+        const timeStr = timeMatch[1];
+        const rest = timeMatch[2].replace(/^\*+|\*+$/g, "").trim();
+        const parts = rest.split(/[-–—@at:]/);
+        const loc = parts.length > 1 ? parts[0].trim() : defaultDestination;
+        const desc = rest;
+        currentActivity = {
+          time: timeStr,
+          location: loc || defaultDestination,
+          description: desc || rest,
+        };
+      } else if (line.startsWith("-") || line.startsWith("*") || line.startsWith("•")) {
+        const cleanContent = line.replace(/^[-*•]\s*/, "").trim();
+        if (cleanContent) {
+          if (!currentActivity) {
+            currentActivity = {
+              time: "Flexible",
+              location: defaultDestination,
+              description: cleanContent,
+            };
+          } else {
+            currentActivity.description += " " + cleanContent;
+          }
+        }
+      }
+    }
+  }
+
+  if (currentDay) {
+    if (currentActivity) currentDay.activities.push(currentActivity);
+    days.push(currentDay);
+  }
+
+  if (days.length > 0) {
+    return {
+      destination: defaultDestination,
+      days,
+    };
+  }
+
+  return null;
+}
+
+export function parseItineraryFromText(
+  text: string,
+  defaultDestination: string = "Trip Plan"
+): ItineraryResponse | null {
+  if (!text || !text.trim()) return null;
+
+  let clean = text.trim();
+
+  clean = clean.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+
+  try {
+    const parsed = JSON.parse(clean);
+    if (isValidItinerary(parsed)) {
+      return normalizeItinerary(parsed, defaultDestination);
+    }
+  } catch {
+    // Continue
+  }
+
+  const firstBrace = clean.indexOf("{");
+  const lastBrace = clean.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    const jsonCandidate = clean.slice(firstBrace, lastBrace + 1);
+    try {
+      const parsed = JSON.parse(jsonCandidate);
+      if (isValidItinerary(parsed)) {
+        return normalizeItinerary(parsed, defaultDestination);
+      }
+    } catch {
+      // Continue
+    }
+  }
+
+  return parseMarkdownItinerary(clean, defaultDestination);
+}
+
 export default function ItineraryForm() {
   const [formData, setFormData] = useState({
     destination: "Osaka",
@@ -60,6 +217,11 @@ export default function ItineraryForm() {
   const [selectedDayFilter, setSelectedDayFilter] = useState<number | "all">("all");
   const [historyList, setHistoryList] = useState<SavedItineraryItem[]>([]);
 
+  // Database Save States & Settings
+  const [saveToDbStatus, setSaveToDbStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [saveToDbMessage, setSaveToDbMessage] = useState<string | null>(null);
+  const [autoSaveToDb, setAutoSaveToDb] = useState<boolean>(false);
+
   const abortControllerRef = useRef<AbortController | null>(null);
   const streamEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -77,17 +239,35 @@ export default function ItineraryForm() {
       const history = getHistoryList();
       setHistoryList(history);
 
+      let loadedItinerary: ItineraryResponse | null = null;
+
       // Restore previously generated itinerary for this session from localStorage
       const cached = localStorage.getItem(`itinerary_saved_${savedId}`);
       if (cached) {
         try {
           const parsed = JSON.parse(cached);
-          if (parsed.itinerary) setItinerary(parsed.itinerary);
           if (parsed.streamedText) setStreamedText(parsed.streamedText);
           if (parsed.formData) setFormData(parsed.formData);
+          
+          if (parsed.itinerary) {
+            loadedItinerary = parsed.itinerary;
+          } else if (parsed.streamedText) {
+            loadedItinerary = parseItineraryFromText(parsed.streamedText, parsed.formData?.destination);
+          }
+          
+          if (loadedItinerary) setItinerary(loadedItinerary);
         } catch (e) {
           console.error("Failed to restore saved itinerary:", e);
         }
+      }
+
+      // Fallback: If no itinerary loaded for current session but past history exists, auto-load latest item
+      if (!loadedItinerary && history.length > 0) {
+        const latest = history[0];
+        setConversationId(latest.id);
+        setItinerary(latest.itinerary);
+        setFormData(latest.formData);
+        setStreamedText(latest.streamedText);
       }
     }
   }, []);
@@ -100,6 +280,8 @@ export default function ItineraryForm() {
     setSelectedDayFilter("all");
     setActiveTab("structured");
     setError(null);
+    setSaveToDbStatus("idle");
+    setSaveToDbMessage(null);
   };
 
   const handleDeleteHistoryItem = (id: string) => {
@@ -108,6 +290,61 @@ export default function ItineraryForm() {
     if (conversationId === id) {
       setItinerary(null);
       setStreamedText("");
+      setSaveToDbStatus("idle");
+      setSaveToDbMessage(null);
+    }
+  };
+
+  const handleSaveToDatabase = async (
+    targetItinerary?: ItineraryResponse | null,
+    targetText?: string,
+    targetId?: string,
+    targetFormData?: typeof formData
+  ) => {
+    const currentItinerary = targetItinerary || itinerary;
+    if (!currentItinerary) return;
+
+    const rawStream = targetText !== undefined ? targetText : streamedText;
+    const sessionUuid = targetId || conversationId || crypto.randomUUID();
+    const currentForm = targetFormData || formData;
+
+    setSaveToDbStatus("saving");
+    setSaveToDbMessage(null);
+
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
+
+    const payload = {
+      conversationId: sessionUuid,
+      destination: currentItinerary.destination,
+      daysCount: currentItinerary.days.length,
+      formData: currentForm,
+      itinerary: currentItinerary,
+      rawText: rawStream,
+      createdAt: new Date().toISOString(),
+    };
+
+    try {
+      const response = await fetch(`${apiBase}/itineraries`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text().catch(() => "");
+        throw new Error(errorBody || `Server returned status HTTP ${response.status}`);
+      }
+
+      setSaveToDbStatus("saved");
+      setSaveToDbMessage("Itinerary successfully saved to Spring Boot backend database!");
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to connect to Spring Boot backend.";
+      console.error("Save to DB error:", err);
+      setSaveToDbStatus("error");
+      setSaveToDbMessage(`Database Save Failed: ${errorMessage}`);
     }
   };
 
@@ -149,6 +386,8 @@ export default function ItineraryForm() {
     setItinerary(null);
     setStreamedText("");
     setError(null);
+    setSaveToDbStatus("idle");
+    setSaveToDbMessage(null);
   };
 
   const handleClearSavedData = () => {
@@ -157,6 +396,8 @@ export default function ItineraryForm() {
     }
     setItinerary(null);
     setStreamedText("");
+    setSaveToDbStatus("idle");
+    setSaveToDbMessage(null);
   };
 
   const formatToKeyValuePrompt = (): string => {
@@ -183,6 +424,8 @@ Generate a ${formData.days}-day itinerary matching these constraints.`;
     setStreamedText("");
     setItinerary(null);
     setError(null);
+    setSaveToDbStatus("idle");
+    setSaveToDbMessage(null);
     setSelectedDayFilter("all");
 
     const controller = new AbortController();
@@ -254,18 +497,11 @@ Generate a ${formData.days}-day itinerary matching these constraints.`;
         accumulatedText += textChunk;
         setStreamedText(accumulatedText);
 
-        // Attempt soft JSON parse while streaming
-        try {
-          const trimmed = accumulatedText.trim();
-          if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
-            const parsed = JSON.parse(trimmed);
-            if (parsed.destination && Array.isArray(parsed.days)) {
-              setItinerary(parsed);
-              finalParsedItinerary = parsed;
-            }
-          }
-        } catch {
-          // Streaming text incomplete or markdown - expected during stream
+        // Attempt soft itinerary parse while streaming
+        const streamedParsed = parseItineraryFromText(accumulatedText, formData.destination);
+        if (streamedParsed) {
+          setItinerary(streamedParsed);
+          finalParsedItinerary = streamedParsed;
         }
       }
 
@@ -276,18 +512,11 @@ Generate a ${formData.days}-day itinerary matching these constraints.`;
         setStreamedText(accumulatedText);
       }
 
-      // Final attempt to parse complete JSON object
-      try {
-        const trimmed = accumulatedText.trim();
-        if (trimmed.startsWith("{")) {
-          const parsed = JSON.parse(trimmed);
-          if (parsed.destination && Array.isArray(parsed.days)) {
-            setItinerary(parsed);
-            finalParsedItinerary = parsed;
-          }
-        }
-      } catch {
-        // Formatted plain markdown/text response
+      // Final attempt to parse complete itinerary
+      const finalParsed = parseItineraryFromText(accumulatedText, formData.destination);
+      if (finalParsed) {
+        setItinerary(finalParsed);
+        finalParsedItinerary = finalParsed;
       }
 
       // Persist results in localStorage
@@ -302,6 +531,11 @@ Generate a ${formData.days}-day itinerary matching these constraints.`;
         };
         const updatedHistory = saveToHistory(newItem);
         setHistoryList(updatedHistory);
+
+        // Optionally auto-save to backend database if enabled
+        if (autoSaveToDb) {
+          handleSaveToDatabase(finalParsedItinerary, accumulatedText, currentSessionId, formData);
+        }
       }
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") {
@@ -439,7 +673,7 @@ Generate a ${formData.days}-day itinerary matching these constraints.`;
             </select>
           </div>
 
-          <div className="pt-2 flex items-center gap-3">
+          <div className="pt-2 flex flex-col space-y-3">
             {!loading ? (
               <button
                 type="submit"
@@ -458,6 +692,19 @@ Generate a ${formData.days}-day itinerary matching these constraints.`;
                 <span>Stop Generation</span>
               </button>
             )}
+
+            <label className="flex items-center space-x-2 text-xs text-slate-600 hover:text-slate-800 cursor-pointer pt-1 select-none">
+              <input
+                type="checkbox"
+                checked={autoSaveToDb}
+                onChange={(e) => setAutoSaveToDb(e.target.checked)}
+                className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
+              />
+              <span className="flex items-center gap-1.5 font-medium">
+                <Database className="w-3.5 h-3.5 text-emerald-600" />
+                Auto-save generated itinerary to Spring Boot database
+              </span>
+            </label>
           </div>
         </form>
       </div>
@@ -498,6 +745,41 @@ Generate a ${formData.days}-day itinerary matching these constraints.`;
             </div>
 
             <div className="flex items-center space-x-2">
+              {/* Save to DB button in top bar */}
+              {!loading && (itinerary || streamedText) && (
+                <div>
+                  {saveToDbStatus === "saved" ? (
+                    <div className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold shadow-2xs">
+                      <Check className="w-4 h-4 text-emerald-600" />
+                      <span className="hidden sm:inline">Saved to DB</span>
+                    </div>
+                  ) : saveToDbStatus === "saving" ? (
+                    <button
+                      disabled
+                      className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-bold opacity-80 cursor-not-allowed shadow-2xs"
+                    >
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="hidden sm:inline">Saving...</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleSaveToDatabase()}
+                      className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-2xs ${
+                        saveToDbStatus === "error"
+                          ? "bg-amber-600 hover:bg-amber-700 text-white"
+                          : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20"
+                      }`}
+                    >
+                      <Database className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">
+                        {saveToDbStatus === "error" ? "Retry Save DB" : "Save to DB"}
+                      </span>
+                    </button>
+                  )}
+                </div>
+              )}
+
               {/* Tab selector if structured itinerary or streamed text exists */}
               {(itinerary || streamedText) && (
                 <div className="flex bg-slate-200/70 p-1 rounded-xl text-xs font-semibold">
@@ -560,7 +842,65 @@ Generate a ${formData.days}-day itinerary matching these constraints.`;
                           {itinerary.destination} Travel Plan
                         </h3>
                       </div>
+
+                      {/* Main Save to Database Action Button */}
+                      <div>
+                        {saveToDbStatus === "saved" ? (
+                          <div className="flex items-center space-x-2 px-4 py-2 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold shadow-2xs">
+                            <CheckCircle2 className="w-4.5 h-4.5 text-emerald-600 shrink-0" />
+                            <span>Saved to Database</span>
+                          </div>
+                        ) : saveToDbStatus === "saving" ? (
+                          <button
+                            disabled
+                            className="flex items-center space-x-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold opacity-80 cursor-not-allowed shadow-md"
+                          >
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Saving to DB...</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleSaveToDatabase()}
+                            className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 ${
+                              saveToDbStatus === "error"
+                                ? "bg-amber-600 hover:bg-amber-700 text-white ring-2 ring-amber-500/20"
+                                : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/20"
+                            }`}
+                          >
+                            <Database className="w-4 h-4" />
+                            <span>{saveToDbStatus === "error" ? "Retry Save to DB" : "Save to Database"}</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Database Save Status Feedback Notification Banner */}
+                    {saveToDbMessage && (
+                      <div
+                        className={`mt-4 p-3.5 rounded-xl text-xs font-medium flex items-center justify-between gap-3 shadow-2xs border ${
+                          saveToDbStatus === "saved"
+                            ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                            : "bg-amber-50 text-amber-900 border-amber-200"
+                        }`}
+                      >
+                        <div className="flex items-center space-x-2">
+                          {saveToDbStatus === "saved" ? (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                          ) : (
+                            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                          )}
+                          <span>{saveToDbMessage}</span>
+                        </div>
+                        <button
+                          onClick={() => setSaveToDbMessage(null)}
+                          className="p-1 text-slate-400 hover:text-slate-600 transition-colors"
+                          title="Dismiss message"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
 
                     {/* Day Selector Tabs */}
                     <div className="mt-5 flex items-center gap-2 overflow-x-auto pb-1">
