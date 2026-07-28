@@ -14,36 +14,15 @@ import {
   Bookmark,
 } from "lucide-react";
 
-export interface Activity {
-  time: string;
-  location: string;
-  description: string;
-}
+import {
+  Activity,
+  DayPlan,
+  ItineraryResponse,
+  SavedItineraryItem,
+  ItineraryFormData,
+} from "../types/itinerary";
 
-export interface DayPlan {
-  dayNumber: number;
-  theme: string;
-  activities: Activity[];
-}
-
-export interface ItineraryResponse {
-  destination: string;
-  days: DayPlan[];
-}
-
-export interface SavedItineraryItem {
-  id: string;
-  createdAt: number;
-  formData: {
-    destination: string;
-    days: number;
-    pace: string;
-    interests: string;
-    budget: string;
-  };
-  itinerary: ItineraryResponse;
-  streamedText: string;
-}
+export type { Activity, DayPlan, ItineraryResponse, SavedItineraryItem, ItineraryFormData };
 
 const HISTORY_KEY = "itinerary_history_list";
 
