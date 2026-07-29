@@ -71,10 +71,11 @@ export default function ItineraryFormFields({
 
       <form onSubmit={onSubmit} className="space-y-5">
         <div>
-          <label className="block text-sm font-semibold text-slate-750 mb-1.5">
+          <label htmlFor="destination" className="block text-sm font-semibold text-slate-750 mb-1.5">
             Destination
           </label>
           <input
+            id="destination"
             type="text"
             name="destination"
             value={formData.destination}
@@ -87,10 +88,11 @@ export default function ItineraryFormFields({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-semibold text-slate-750 mb-1.5">
+            <label htmlFor="days" className="block text-sm font-semibold text-slate-750 mb-1.5">
               Days (1-7)
             </label>
             <input
+              id="days"
               type="number"
               name="days"
               min="1"
@@ -102,10 +104,11 @@ export default function ItineraryFormFields({
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-750 mb-1.5">
+            <label htmlFor="pace" className="block text-sm font-semibold text-slate-750 mb-1.5">
               Pace
             </label>
             <select
+              id="pace"
               name="pace"
               value={formData.pace}
               onChange={onChange}
@@ -119,10 +122,11 @@ export default function ItineraryFormFields({
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-slate-750 mb-1.5">
+          <label htmlFor="interests" className="block text-sm font-semibold text-slate-750 mb-1.5">
             Interests
           </label>
           <input
+            id="interests"
             type="text"
             name="interests"
             value={formData.interests}
@@ -133,10 +137,11 @@ export default function ItineraryFormFields({
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-slate-750 mb-1.5">
+          <label htmlFor="budget" className="block text-sm font-semibold text-slate-750 mb-1.5">
             Budget
           </label>
           <select
+            id="budget"
             name="budget"
             value={formData.budget}
             onChange={onChange}
