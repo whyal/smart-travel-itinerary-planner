@@ -173,7 +173,7 @@ export default function ItineraryOutputView({
             <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
               <AlertCircle className="w-8 h-8 text-slate-400 mx-auto mb-2" />
               <p className="text-slate-700 font-semibold">Response completed</p>
-              <p className="text-xs text-slate-500 mt-1">Switch to "Raw Stream" tab to view raw output.</p>
+              <p className="text-xs text-slate-500 mt-1">Switch to &quot;Raw Stream&quot; tab to view raw output.</p>
             </div>
           )
         ) : (

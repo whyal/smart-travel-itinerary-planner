@@ -9,7 +9,6 @@ import {
   MapPin,
   Clock,
   X,
-  Sparkles,
   ChevronRight,
   Bookmark,
 } from "lucide-react";
