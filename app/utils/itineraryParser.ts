@@ -1,5 +1,44 @@
 import { Activity, DayPlan, ItineraryResponse } from "../types/itinerary";
 
+function cleanStringValue(val: unknown): string {
+  if (val === null || val === undefined) return "";
+  return String(val)
+    .replace(/\\n/g, " ")
+    .replace(/\r?\n/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Sanitizes JSON string payloads by escaping unescaped control characters (such as raw linebreaks)
+ * inside double-quoted string literals so that JSON.parse can process them successfully.
+ */
+export function sanitizeJsonString(str: string): string {
+  if (!str) return str;
+  return str.replace(/"([^"\\]*(\\.[^"\\]*)*)"/g, (match) => {
+    return match.replace(/\r?\n/g, "\\n");
+  });
+}
+
+/**
+ * Safely parses a JSON string, attempting direct JSON.parse first,
+ * and falling back to a sanitized JSON string parse if raw linebreaks exist inside string values.
+ */
+export function safeJsonParse(jsonStr: string): unknown | null {
+  if (!jsonStr) return null;
+  const clean = jsonStr.trim();
+  try {
+    return JSON.parse(clean);
+  } catch {
+    try {
+      const sanitized = sanitizeJsonString(clean);
+      return JSON.parse(sanitized);
+    } catch {
+      return null;
+    }
+  }
+}
+
 /**
  * Unwraps outer JSON structures (e.g. { "itinerary": { ... } }, { "data": { ... } }, or root arrays)
  * to locate the object or array containing itinerary days/plans.
@@ -113,7 +152,7 @@ export function normalizeItinerary(
     rawDays = unwrapped;
   } else if (typeof unwrapped === "object" && unwrapped !== null) {
     const target = unwrapped as Record<string, unknown>;
-    dest = String(
+    dest = cleanStringValue(
       target.destination ||
         target.Destination ||
         target.city ||
@@ -147,8 +186,8 @@ export function normalizeItinerary(
         activities: [
           {
             time: "Flexible",
-            location: String(dest),
-            description: d,
+            location: cleanStringValue(dest),
+            description: cleanStringValue(d),
           },
         ],
       };
@@ -163,7 +202,7 @@ export function normalizeItinerary(
       item.dayNumber ?? item.day ?? item.day_number ?? item.dayNo ?? item.day_no ?? idx + 1
     );
 
-    const theme = String(
+    const theme = cleanStringValue(
       item.theme ||
         item.title ||
         item.heading ||
@@ -188,8 +227,8 @@ export function normalizeItinerary(
           if (typeof a === "string") {
             return {
               time: "Flexible",
-              location: String(dest),
-              description: a,
+              location: cleanStringValue(dest),
+              description: cleanStringValue(a),
             };
           }
           const actObj = (
@@ -197,13 +236,13 @@ export function normalizeItinerary(
           ) as Record<string, unknown>;
 
           return {
-            time: String(
+            time: cleanStringValue(
               actObj.time || actObj.timeOfDay || actObj.time_of_day || actObj.hour || "Flexible"
             ),
-            location: String(
+            location: cleanStringValue(
               actObj.location || actObj.place || actObj.spot || actObj.venue || dest
             ),
-            description: String(
+            description: cleanStringValue(
               actObj.description || actObj.details || actObj.activity || actObj.title || actObj.name || ""
             ),
           };
@@ -218,7 +257,7 @@ export function normalizeItinerary(
   });
 
   return {
-    destination: String(dest),
+    destination: cleanStringValue(dest),
     days,
   };
 }
@@ -252,7 +291,7 @@ export function parseMarkdownItinerary(
         .trim();
       currentDay = {
         dayNumber: dayNum,
-        theme: cleanTheme || `Day ${dayNum} Highlights`,
+        theme: cleanStringValue(cleanTheme || `Day ${dayNum} Highlights`),
         activities: [],
       };
       currentActivity = null;
@@ -271,9 +310,9 @@ export function parseMarkdownItinerary(
         const loc = parts.length > 1 ? parts[0].trim() : defaultDestination;
         const desc = rest;
         currentActivity = {
-          time: timeStr,
-          location: loc || defaultDestination,
-          description: desc || rest,
+          time: cleanStringValue(timeStr),
+          location: cleanStringValue(loc || defaultDestination),
+          description: cleanStringValue(desc || rest),
         };
       } else if (
         line.startsWith("-") ||
@@ -285,11 +324,11 @@ export function parseMarkdownItinerary(
           if (!currentActivity) {
             currentActivity = {
               time: "Flexible",
-              location: defaultDestination,
-              description: cleanContent,
+              location: cleanStringValue(defaultDestination),
+              description: cleanStringValue(cleanContent),
             };
           } else {
-            currentActivity.description += " " + cleanContent;
+            currentActivity.description += " " + cleanStringValue(cleanContent);
           }
         }
       }
@@ -303,7 +342,7 @@ export function parseMarkdownItinerary(
 
   if (days.length > 0) {
     return {
-      destination: defaultDestination,
+      destination: cleanStringValue(defaultDestination),
       days,
     };
   }
@@ -331,14 +370,14 @@ export function buildFallbackItinerary(
     const time = timeMatch ? timeMatch[1] : "Flexible";
     const description = line.replace(/^[-*•#\d.]+\s*/, "").trim();
     return {
-      time,
-      location: defaultDestination,
-      description: description || line,
+      time: cleanStringValue(time),
+      location: cleanStringValue(defaultDestination),
+      description: cleanStringValue(description || line),
     };
   });
 
   return {
-    destination: defaultDestination,
+    destination: cleanStringValue(defaultDestination),
     days: [
       {
         dayNumber: 1,
@@ -349,8 +388,8 @@ export function buildFallbackItinerary(
             : [
                 {
                   time: "Flexible",
-                  location: defaultDestination,
-                  description: text.slice(0, 300),
+                  location: cleanStringValue(defaultDestination),
+                  description: cleanStringValue(text.slice(0, 300)),
                 },
               ],
       },
@@ -371,15 +410,11 @@ export function parseItineraryFromText(
     .replace(/\s*```$/i, "")
     .trim();
 
-  // 1. Direct JSON parse attempt
-  try {
-    const parsed = JSON.parse(clean);
-    if (isValidItinerary(parsed)) {
-      const normalized = normalizeItinerary(parsed, defaultDestination);
-      if (normalized.days.length > 0) return normalized;
-    }
-  } catch {
-    // Continue
+  // 1. Direct or Sanitized JSON parse attempt
+  const parsed = safeJsonParse(clean);
+  if (parsed && isValidItinerary(parsed)) {
+    const normalized = normalizeItinerary(parsed, defaultDestination);
+    if (normalized.days.length > 0) return normalized;
   }
 
   // 2. Search for candidate JSON object {...}
@@ -387,14 +422,10 @@ export function parseItineraryFromText(
   const lastBrace = clean.lastIndexOf("}");
   if (firstBrace !== -1 && lastBrace > firstBrace) {
     const jsonCandidate = clean.slice(firstBrace, lastBrace + 1);
-    try {
-      const parsed = JSON.parse(jsonCandidate);
-      if (isValidItinerary(parsed)) {
-        const normalized = normalizeItinerary(parsed, defaultDestination);
-        if (normalized.days.length > 0) return normalized;
-      }
-    } catch {
-      // Continue
+    const parsedCandidate = safeJsonParse(jsonCandidate);
+    if (parsedCandidate && isValidItinerary(parsedCandidate)) {
+      const normalized = normalizeItinerary(parsedCandidate, defaultDestination);
+      if (normalized.days.length > 0) return normalized;
     }
   }
 
@@ -403,14 +434,10 @@ export function parseItineraryFromText(
   const lastBracket = clean.lastIndexOf("]");
   if (firstBracket !== -1 && lastBracket > firstBracket) {
     const arrayCandidate = clean.slice(firstBracket, lastBracket + 1);
-    try {
-      const parsed = JSON.parse(arrayCandidate);
-      if (isValidItinerary(parsed)) {
-        const normalized = normalizeItinerary(parsed, defaultDestination);
-        if (normalized.days.length > 0) return normalized;
-      }
-    } catch {
-      // Continue
+    const parsedCandidate = safeJsonParse(arrayCandidate);
+    if (parsedCandidate && isValidItinerary(parsedCandidate)) {
+      const normalized = normalizeItinerary(parsedCandidate, defaultDestination);
+      if (normalized.days.length > 0) return normalized;
     }
   }
 
