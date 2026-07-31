@@ -29,13 +29,13 @@ This client interfaces with a backend Spring AI service to provide a type-safe t
   <table>
     <tr>
       <td>
-        <img width="600" alt="Screenshot 2026-07-24 234201" src="https://github.com/user-attachments/assets/92591192-f345-4307-b896-22ac7d810363" />        
+        <img width="600" alt="Itinerary generation form" src="https://github.com/user-attachments/assets/3a0c8ffe-d68c-4b31-b5f7-d933f02999f9" />
         <p align="center"><em>Figure 1: User form desired destination and relevant information.</em></p>
       </td>
     </tr>
     <tr>
       <td>
-        <img width="600" alt="Screenshot 2026-07-24 234209" src="https://github.com/user-attachments/assets/6bb170d5-d2af-40a2-9141-686d44090d72" />        
+        <img width="600" alt="Generated Itinerary" src="https://github.com/user-attachments/assets/d17189dd-9a4e-4c1c-9fb6-03eedd130934" /> 
         <p align="center"><em>Figure 2: Generated itinerary of the user's desired destination.</em></p>
       </td>
     </tr>
