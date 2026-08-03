@@ -1,26 +1,17 @@
 #  AI Travel Itinerary Planner (Frontend)
 
-The web interface for the AI Travel Itinerary Generator, built with **Next.js (App Router)**, **TypeScript**, and **Tailwind CSS**. 
+The web client interfaces with a backend Spring AI backend to provide a type-safe travel planning experience.
 
-This client interfaces with a backend Spring AI service to provide a type-safe travel planning experience. It supports dynamic UUID session management and consumes Server-Sent Events (SSE) to render travel itineraries progressively as the AI generates them.
-
----
 
 ##  Key Features
 
 - **Progressive UI Rendering:** Consumes the backend's `text/event-stream` SSE endpoint (`/api/itinerary/stream`) to display itinerary days, activities, and dining options in real-time without waiting for full generation.
-- **Type-Safe State Management:** Matches TypeScript interfaces 1:1 with the backend's Java 25+ Records (`Itinerary`, `PromptRequest`) to prevent runtime schema mismatches.
 - **Dynamic Session Isolation:** Automatically generates and persists unique `conversationId` UUIDs per user session, ensuring multi-turn chat memory remains isolated when communicating with the backend's `MessageChatMemoryAdvisor`.
-- **Responsive & Accessible UI:** Styled with Tailwind CSS for clean, adaptable layouts across mobile, tablet, and desktop viewports.
-
----
 
 ![Next.js](https://img.shields.io/badge/Next.js_16-000000?style=flat&logo=nextdotjs&logoColor=white)
 ![React](https://img.shields.io/badge/React_19-20232A?style=flat&logo=react&logoColor=61DAFB)
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS_v4-06B6D4?style=flat&logo=tailwindcss&logoColor=white)
-
----
 
 <div align="center">
   <table>
