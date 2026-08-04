@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: itinerary-assistant
+  ai:
+    google:
+      genai:
+        api-key: ${GEMINI_API_KEY}
+        embedding:
+          # Authenticates the EmbeddingModel (SimpleVectorStore)
+          api-key: ${GEMINI_API_KEY}
