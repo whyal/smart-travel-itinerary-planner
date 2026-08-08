@@ -22,6 +22,9 @@ extra["springAiVersion"] = "2.0.0"
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    runtimeOnly("org.postgresql:postgresql")
+    implementation("com.h2database:h2")
 
     // 1. Google GenAI Chat Starter (Provides ChatModel)
     implementation("org.springframework.ai:spring-ai-starter-model-google-genai")

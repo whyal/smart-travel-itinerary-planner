@@ -267,6 +267,67 @@ describe("ItineraryForm Component", () => {
 
       consoleErrorSpy.mockRestore();
     });
+
+    it("saves a past itinerary to database from Past Itineraries drawer when Save to DB button is clicked", async () => {
+      const user = userEvent.setup();
+
+      // Seed localStorage with a past itinerary item
+      const pastItem = {
+        id: "past-session-123",
+        createdAt: Date.now() - 10000,
+        formData: {
+          destination: "Tokyo",
+          days: 2,
+          pace: "Relaxed",
+          interests: "Culture",
+          budget: "Luxury",
+        },
+        itinerary: {
+          destination: "Tokyo",
+          days: [
+            {
+              dayNumber: 1,
+              theme: "Temples",
+              activities: [
+                { time: "10:00 AM", location: "Senso-ji", description: "Visit temple" },
+              ],
+            },
+          ],
+        },
+        streamedText: "Day 1: Temples",
+      };
+      localStorage.setItem("itinerary_history_list", JSON.stringify([pastItem]));
+
+      (itineraryApi.saveItineraryToDatabase as jest.Mock).mockResolvedValueOnce(undefined);
+
+      render(<ItineraryForm />);
+
+      // Open Past Itineraries drawer
+      const historyBtn = screen.getByRole("button", { name: /past itineraries/i });
+      await user.click(historyBtn);
+
+      // Verify the past item is visible in drawer
+      expect(screen.getByText("Tokyo")).toBeInTheDocument();
+
+      // Click "Save to DB" button inside drawer for the item
+      const saveDbBtns = screen.getAllByRole("button", { name: /save to db/i });
+      await user.click(saveDbBtns[0]);
+
+      // Verify API was called with the past item payload
+      await waitFor(() => {
+        expect(itineraryApi.saveItineraryToDatabase).toHaveBeenCalledWith(
+          expect.objectContaining({
+            conversationId: "past-session-123",
+            destination: "Tokyo",
+            daysCount: 1,
+          })
+        );
+      });
+
+      // Verify UI changes to "Saved to DB"
+      const savedBadges = await screen.findAllByText(/saved to db/i);
+      expect(savedBadges.length).toBeGreaterThan(0);
+    });
   });
 
   describe("Session Reset & Stop Generation Handlers", () => {

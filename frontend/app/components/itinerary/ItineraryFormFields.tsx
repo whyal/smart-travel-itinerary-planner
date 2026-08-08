@@ -20,6 +20,7 @@ interface ItineraryFormFieldsProps {
   onAutoSaveChange: (checked: boolean) => void;
   onSelectHistoryItem: (item: SavedItineraryItem) => void;
   onDeleteHistoryItem: (id: string) => void;
+  onSaveHistoryItemToDatabase?: (item: SavedItineraryItem) => Promise<void>;
 }
 
 export default function ItineraryFormFields({
@@ -35,6 +36,7 @@ export default function ItineraryFormFields({
   onAutoSaveChange,
   onSelectHistoryItem,
   onDeleteHistoryItem,
+  onSaveHistoryItemToDatabase,
 }: ItineraryFormFieldsProps) {
   return (
     <div className="p-6 sm:p-8 bg-white rounded-2xl shadow-xl border border-slate-100">
@@ -56,6 +58,7 @@ export default function ItineraryFormFields({
             currentId={conversationId}
             onSelect={onSelectHistoryItem}
             onDelete={onDeleteHistoryItem}
+            onSaveToDatabase={onSaveHistoryItemToDatabase}
           />
           <button
             type="button"

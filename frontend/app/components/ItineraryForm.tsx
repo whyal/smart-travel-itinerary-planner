@@ -13,6 +13,7 @@ import {
   getHistoryList,
   saveToHistory,
   deleteFromHistory,
+  updateHistoryItemSavedToDb,
 } from "./ItineraryHistory";
 import ItineraryFormFields from "./itinerary/ItineraryFormFields";
 import ErrorBanner from "./itinerary/ErrorBanner";
@@ -152,9 +153,9 @@ export default function ItineraryForm() {
     targetText?: string,
     targetId?: string,
     targetFormData?: ItineraryFormData,
-  ) => {
+  ): Promise<boolean> => {
     const currentItinerary = targetItinerary || itinerary;
-    if (!currentItinerary) return;
+    if (!currentItinerary) return false;
 
     const rawStream = targetText !== undefined ? targetText : streamedText;
     const sessionUuid = targetId || conversationId || crypto.randomUUID();
@@ -179,6 +180,9 @@ export default function ItineraryForm() {
       setSaveToDbMessage(
         "Itinerary successfully saved to Spring Boot backend database!",
       );
+      const updated = updateHistoryItemSavedToDb(sessionUuid, true);
+      setHistoryList(updated);
+      return true;
     } catch (err: unknown) {
       const errorMessage =
         err instanceof Error
@@ -187,6 +191,19 @@ export default function ItineraryForm() {
       console.error("Save to DB error:", err);
       setSaveToDbStatus("error");
       setSaveToDbMessage(`Database Save Failed: ${errorMessage}`);
+      return false;
+    }
+  };
+
+  const handleSaveHistoryItemToDatabase = async (item: SavedItineraryItem) => {
+    const success = await handleSaveToDatabase(
+      item.itinerary,
+      item.streamedText,
+      item.id,
+      item.formData,
+    );
+    if (!success) {
+      throw new Error("Failed to save itinerary to database.");
     }
   };
 
@@ -430,6 +447,7 @@ Generate a ${formData.days}-day itinerary matching these constraints.`;
         onAutoSaveChange={setAutoSaveToDb}
         onSelectHistoryItem={handleSelectHistoryItem}
         onDeleteHistoryItem={handleDeleteHistoryItem}
+        onSaveHistoryItemToDatabase={handleSaveHistoryItemToDatabase}
       />
 
       {/* Error Banner */}

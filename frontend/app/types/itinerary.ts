@@ -29,6 +29,7 @@ export interface SavedItineraryItem {
   formData: ItineraryFormData;
   itinerary: ItineraryResponse;
   streamedText: string;
+  savedToDb?: boolean;
 }
 
 export type SaveToDbStatus = "idle" | "saving" | "saved" | "error";

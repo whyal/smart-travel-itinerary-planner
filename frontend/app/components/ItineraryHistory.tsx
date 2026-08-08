@@ -11,6 +11,9 @@ import {
   X,
   ChevronRight,
   Bookmark,
+  Database,
+  Loader2,
+  Check,
 } from "lucide-react";
 
 import {
@@ -19,7 +22,9 @@ import {
   ItineraryResponse,
   SavedItineraryItem,
   ItineraryFormData,
+  SaveToDbStatus,
 } from "../types/itinerary";
+import { saveItineraryToDatabase } from "../services/itineraryApi";
 
 export type { Activity, DayPlan, ItineraryResponse, SavedItineraryItem, ItineraryFormData };
 
@@ -50,6 +55,24 @@ export const saveToHistory = (item: SavedItineraryItem): SavedItineraryItem[] =>
   }
 };
 
+export const updateHistoryItemSavedToDb = (
+  id: string,
+  savedToDb: boolean = true
+): SavedItineraryItem[] => {
+  if (typeof window === "undefined") return [];
+  try {
+    const current = getHistoryList();
+    const updated = current.map((item) =>
+      item.id === id ? { ...item, savedToDb } : item
+    );
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+    return updated;
+  } catch (e) {
+    console.error("Failed to update itinerary history item:", e);
+    return getHistoryList();
+  }
+};
+
 export const deleteFromHistory = (id: string): SavedItineraryItem[] => {
   if (typeof window === "undefined") return [];
   try {
@@ -69,6 +92,7 @@ interface ItineraryHistoryProps {
   onSelect: (item: SavedItineraryItem) => void;
   onDelete: (id: string) => void;
   onClearAll?: () => void;
+  onSaveToDatabase?: (item: SavedItineraryItem) => Promise<void>;
 }
 
 export default function ItineraryHistory({
@@ -76,8 +100,47 @@ export default function ItineraryHistory({
   currentId,
   onSelect,
   onDelete,
+  onSaveToDatabase,
 }: ItineraryHistoryProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [itemSaveStatuses, setItemSaveStatuses] = useState<
+    Record<string, { status: SaveToDbStatus; message?: string }>
+  >({});
+
+  const handleSaveItem = async (item: SavedItineraryItem) => {
+    setItemSaveStatuses((prev) => ({
+      ...prev,
+      [item.id]: { status: "saving" },
+    }));
+
+    try {
+      if (onSaveToDatabase) {
+        await onSaveToDatabase(item);
+      } else {
+        await saveItineraryToDatabase({
+          conversationId: item.id,
+          destination: item.itinerary.destination,
+          daysCount: item.itinerary.days.length,
+          formData: item.formData,
+          itinerary: item.itinerary,
+          rawText: item.streamedText,
+          createdAt: new Date(item.createdAt).toISOString(),
+        });
+        updateHistoryItemSavedToDb(item.id, true);
+      }
+      setItemSaveStatuses((prev) => ({
+        ...prev,
+        [item.id]: { status: "saved", message: "Saved to database!" },
+      }));
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to save to database.";
+      setItemSaveStatuses((prev) => ({
+        ...prev,
+        [item.id]: { status: "error", message: errorMessage },
+      }));
+    }
+  };
 
   const formatDate = (timestamp: number) => {
     try {
@@ -149,6 +212,11 @@ export default function ItineraryHistory({
               ) : (
                 historyList.map((item) => {
                   const isCurrent = item.id === currentId;
+                  const itemStatusObj = itemSaveStatuses[item.id];
+                  const itemSaveStatus: SaveToDbStatus =
+                    itemStatusObj?.status || (item.savedToDb ? "saved" : "idle");
+                  const itemSaveMessage = itemStatusObj?.message;
+
                   return (
                     <div
                       key={item.id}
@@ -202,8 +270,52 @@ export default function ItineraryHistory({
                         </span>
                       </div>
 
-                      {/* View Button */}
-                      <div className="pt-2 border-t border-slate-100 flex justify-end">
+                      {/* Action Buttons: Save to DB & View */}
+                      <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleSaveItem(item)}
+                          disabled={
+                            itemSaveStatus === "saving" ||
+                            itemSaveStatus === "saved"
+                          }
+                          title={
+                            itemSaveStatus === "saved"
+                              ? "Saved to database"
+                              : "Save itinerary to Spring Boot database"
+                          }
+                          className={`flex items-center space-x-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition ${
+                            itemSaveStatus === "saved"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default"
+                              : itemSaveStatus === "saving"
+                              ? "bg-emerald-100 text-emerald-800 cursor-wait opacity-80"
+                              : itemSaveStatus === "error"
+                              ? "bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200"
+                              : "bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200"
+                          }`}
+                        >
+                          {itemSaveStatus === "saving" ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+                              <span>Saving...</span>
+                            </>
+                          ) : itemSaveStatus === "saved" ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Saved to DB</span>
+                            </>
+                          ) : (
+                            <>
+                              <Database className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>
+                                {itemSaveStatus === "error"
+                                  ? "Retry Save DB"
+                                  : "Save to DB"}
+                              </span>
+                            </>
+                          )}
+                        </button>
+
                         <button
                           type="button"
                           onClick={() => {
@@ -213,10 +325,16 @@ export default function ItineraryHistory({
                           className="flex items-center space-x-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition"
                         >
                           <Eye className="w-3.5 h-3.5" />
-                          <span>View Itinerary Cards</span>
+                          <span>View Itinerary</span>
                           <ChevronRight className="w-3.5 h-3.5" />
                         </button>
                       </div>
+
+                      {itemSaveMessage && itemSaveStatus === "error" && (
+                        <p className="mt-2 text-[11px] text-red-600 bg-red-50 p-2 rounded-lg border border-red-100 font-medium">
+                          {itemSaveMessage}
+                        </p>
+                      )}
                     </div>
                   );
                 })
