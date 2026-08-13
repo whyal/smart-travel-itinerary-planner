@@ -27,88 +27,20 @@ const defaultForm: ItineraryFormData = {
   budget: "Mid-range",
 };
 
-function getInitialState() {
-  if (typeof window === "undefined") {
-    return {
-      conversationId: "",
-      formData: defaultForm,
-      streamedText: "",
-      itinerary: null as ItineraryResponse | null,
-    };
-  }
-
-  let savedId = localStorage.getItem("itinerary_conversation_id");
-  if (!savedId) {
-    savedId = crypto.randomUUID();
-    localStorage.setItem("itinerary_conversation_id", savedId);
-  }
-
-  const cached = localStorage.getItem(`itinerary_saved_${savedId}`);
-  if (cached) {
-    try {
-      const parsed = JSON.parse(cached);
-      const streamedText = parsed.streamedText || "";
-      const formData = parsed.formData || defaultForm;
-      let itinerary = parsed.itinerary || null;
-
-      if (!itinerary && streamedText) {
-        itinerary = parseItineraryFromText(streamedText, formData.destination);
-      }
-
-      return {
-        conversationId: savedId,
-        formData,
-        streamedText,
-        itinerary,
-      };
-    } catch (e) {
-      console.error("Failed to restore saved session state:", e);
-    }
-  }
-
-  const history = getHistoryList();
-  if (history.length > 0) {
-    const latest = history[0];
-    return {
-      conversationId: latest.id,
-      formData: latest.formData,
-      streamedText: latest.streamedText,
-      itinerary: latest.itinerary,
-    };
-  }
-
-  return {
-    conversationId: savedId,
-    formData: defaultForm,
-    streamedText: "",
-    itinerary: null,
-  };
-}
-
 export default function ItineraryForm() {
-  const [initialState] = useState(getInitialState);
-
-  const [formData, setFormData] = useState<ItineraryFormData>(
-    initialState.formData
-  );
+  const [formData, setFormData] = useState<ItineraryFormData>(defaultForm);
   const [loading, setLoading] = useState(false);
-  const [streamedText, setStreamedText] = useState(initialState.streamedText);
-  const [itinerary, setItinerary] = useState<ItineraryResponse | null>(
-    initialState.itinerary
-  );
+  const [streamedText, setStreamedText] = useState("");
+  const [itinerary, setItinerary] = useState<ItineraryResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [conversationId, setConversationId] = useState<string>(
-    initialState.conversationId
-  );
+  const [conversationId, setConversationId] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"structured" | "raw">(
     "structured"
   );
   const [selectedDayFilter, setSelectedDayFilter] = useState<number | "all">(
     "all"
   );
-  const [historyList, setHistoryList] = useState<SavedItineraryItem[]>(() =>
-    getHistoryList()
-  );
+  const [historyList, setHistoryList] = useState<SavedItineraryItem[]>([]);
 
   // Database Save States & Settings
   const [saveToDbStatus, setSaveToDbStatus] = useState<SaveToDbStatus>("idle");
@@ -117,6 +49,55 @@ export default function ItineraryForm() {
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const streamEndRef = useRef<HTMLDivElement | null>(null);
+
+  // Restore session and past history from localStorage after mounting (hydration-safe)
+  useEffect(() => {
+    queueMicrotask(() => {
+      let savedId = localStorage.getItem("itinerary_conversation_id");
+      if (!savedId) {
+        savedId = crypto.randomUUID();
+        localStorage.setItem("itinerary_conversation_id", savedId);
+      }
+
+      const history = getHistoryList();
+      setHistoryList(history);
+
+      const cached = localStorage.getItem(`itinerary_saved_${savedId}`);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          const savedText = parsed.streamedText || "";
+          const savedForm = parsed.formData || defaultForm;
+          let savedItinerary = parsed.itinerary || null;
+
+          if (!savedItinerary && savedText) {
+            savedItinerary = parseItineraryFromText(
+              savedText,
+              savedForm.destination
+            );
+          }
+
+          setConversationId(savedId);
+          setFormData(savedForm);
+          setStreamedText(savedText);
+          setItinerary(savedItinerary);
+          return;
+        } catch (e) {
+          console.error("Failed to restore saved session state:", e);
+        }
+      }
+
+      if (history.length > 0) {
+        const latest = history[0];
+        setConversationId(latest.id);
+        setFormData(latest.formData);
+        setStreamedText(latest.streamedText);
+        setItinerary(latest.itinerary);
+      } else {
+        setConversationId(savedId);
+      }
+    });
+  }, []);
 
   // Auto-scroll streaming log container as new text streams in
   useEffect(() => {

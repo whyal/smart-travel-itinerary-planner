@@ -48,7 +48,7 @@ export default function ItineraryFormFields({
           <div>
             <h2 className="text-xl font-bold text-slate-900">Plan Your Trip</h2>
             <p className="text-xs text-slate-500 font-mono mt-0.5">
-              Session ID: {conversationId.slice(0, 8)}...
+              Session ID: {conversationId ? `${conversationId.slice(0, 8)}...` : "..."}
             </p>
           </div>
         </div>
