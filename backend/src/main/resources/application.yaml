@@ -17,3 +17,7 @@ spring:
         embedding:
           # Authenticates the EmbeddingModel (SimpleVectorStore)
           api-key: ${GEMINI_API_KEY}
+
+app:
+  rag:
+    auto-ingest-kyoto: ${AUTO_INGEST_KYOTO:true}

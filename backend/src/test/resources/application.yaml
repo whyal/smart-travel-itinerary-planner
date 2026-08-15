@@ -16,3 +16,7 @@ spring:
         api-key: test-key
         embedding:
           api-key: test-key
+
+app:
+  rag:
+    auto-ingest-kyoto: false
