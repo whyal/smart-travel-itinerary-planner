@@ -2,6 +2,11 @@ package com.yonglun.itineraryassistant.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yonglun.itineraryassistant.dto.TravelDocumentDto;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,6 +20,7 @@ import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.mock.web.MockMultipartFile;
 
+import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
@@ -39,33 +45,7 @@ class IngestionServiceTest {
         ingestionService = new IngestionService(vectorStore, resourceLoader, objectMapper);
     }
 
-    @Test
-    void testIngestKyotoKnowledge() {
-        int count = ingestionService.ingestKyotoKnowledge();
 
-        assertThat(count).isGreaterThan(0);
-        assertThat(ingestionService.isKyotoIngested()).isTrue();
-        assertThat(ingestionService.isDestinationIngested("Kyoto")).isTrue();
-        assertThat(ingestionService.getIngestedDocumentCount()).isEqualTo(count);
-        assertThat(ingestionService.getIngestedDestinations()).contains("Kyoto");
-        assertThat(ingestionService.getDestinationDocumentCounts()).containsEntry("Kyoto", count);
-
-        @SuppressWarnings("unchecked")
-        ArgumentCaptor<List<Document>> captor = ArgumentCaptor.forClass(List.class);
-        verify(vectorStore, times(1)).add(captor.capture());
-
-        List<Document> capturedDocs = captor.getValue();
-        assertThat(capturedDocs).hasSize(count);
-
-        Document firstDoc = capturedDocs.getFirst();
-        assertThat(firstDoc.getId()).isNotBlank();
-        assertThat(firstDoc.getText()).contains("Kyoto");
-        assertThat(firstDoc.getMetadata())
-                .containsEntry("destination", "Kyoto")
-                .containsKey("category")
-                .containsKey("district")
-                .containsKey("title");
-    }
 
     @Test
     void testIngestStructuredDocuments() {
@@ -196,6 +176,46 @@ class IngestionServiceTest {
 
         assertThat(count).isEqualTo(2);
         assertThat(ingestionService.isDestinationIngested("Rome")).isTrue();
+    }
+
+    @Test
+    void testIngestPdfFileUpload() throws Exception {
+        byte[] pdfBytes;
+        try (PDDocument doc = new PDDocument()) {
+            PDPage page = new PDPage();
+            doc.addPage(page);
+            try (PDPageContentStream content = new PDPageContentStream(doc, page)) {
+                content.beginText();
+                content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 12);
+                content.newLineAtOffset(50, 700);
+                content.showText("Barcelona Sagrada Familia travel overview and visitor tips.");
+                content.endText();
+            }
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            doc.save(baos);
+            pdfBytes = baos.toByteArray();
+        }
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "barcelona_guide.pdf",
+                "application/pdf",
+                pdfBytes
+        );
+
+        int count = ingestionService.ingestFile(file, "Barcelona");
+
+        assertThat(count).isGreaterThan(0);
+        assertThat(ingestionService.isDestinationIngested("Barcelona")).isTrue();
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<Document>> captor = ArgumentCaptor.forClass(List.class);
+        verify(vectorStore, times(1)).add(captor.capture());
+
+        List<Document> capturedDocs = captor.getValue();
+        assertThat(capturedDocs).isNotEmpty();
+        assertThat(capturedDocs.get(0).getText()).contains("Barcelona", "Sagrada", "Familia");
+        assertThat(capturedDocs.get(0).getMetadata()).containsEntry("destination", "Barcelona");
     }
 
     @Test

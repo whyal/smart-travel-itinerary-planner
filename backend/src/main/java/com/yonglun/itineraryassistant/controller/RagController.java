@@ -22,23 +22,9 @@ public class RagController {
     }
 
     /**
-     * Trigger embedding and ingestion of the curated Kyoto travel documents.
-     */
-    @PostMapping("/ingest/kyoto")
-    public ResponseEntity<IngestionResponse> ingestKyotoKnowledge() {
-        int count = ingestionService.ingestKyotoKnowledge();
-        return ResponseEntity.ok(new IngestionResponse(
-                "success",
-                "Successfully embedded and ingested " + count + " Kyoto travel knowledge documents into the vector store.",
-                "Kyoto",
-                count
-        ));
-    }
-
-    /**
      * Ingest custom articles/documents dynamically for any destination.
      */
-    @PostMapping("/ingest/custom")
+    @PostMapping(value = {"/ingest", "/ingest/custom"})
     public ResponseEntity<IngestionResponse> ingestCustomKnowledge(@RequestBody CustomIngestionRequest request) {
         if (request == null || request.articles() == null || request.articles().isEmpty()) {
             return ResponseEntity.badRequest().body(new IngestionResponse(
@@ -86,7 +72,6 @@ public class RagController {
     public ResponseEntity<RagStatusResponse> getStatus() {
         return ResponseEntity.ok(new RagStatusResponse(
                 "ready",
-                ingestionService.isKyotoIngested(),
                 ingestionService.getIngestedDocumentCount(),
                 ingestionService.getIngestedDestinations(),
                 ingestionService.getDestinationDocumentCounts()

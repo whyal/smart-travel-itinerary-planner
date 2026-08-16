@@ -1,6 +1,11 @@
 spring:
   application:
     name: itinerary-assistant
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 50MB
+      max-request-size: 50MB
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/tripplanner}
     username: ${DB_USERNAME}
@@ -15,9 +20,16 @@ spring:
       genai:
         api-key: ${GEMINI_API_KEY}
         embedding:
-          # Authenticates the EmbeddingModel (SimpleVectorStore)
+          # Authenticates the EmbeddingModel (Google GenAI text-embedding-004)
           api-key: ${GEMINI_API_KEY}
+    vectorstore:
+      pgvector:
+        initialize-schema: true
+        dimensions: 768
+        distance-type: COSINE_DISTANCE
+        table-name: vector_store
+        schema-name: public
 
 app:
-  rag:
-    auto-ingest-kyoto: ${AUTO_INGEST_KYOTO:true}
+  vectorstore:
+    type: ${VECTORSTORE_TYPE:pgvector}

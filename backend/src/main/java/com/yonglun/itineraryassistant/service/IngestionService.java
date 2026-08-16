@@ -7,8 +7,12 @@ import com.yonglun.itineraryassistant.dto.TravelDocumentDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
+import org.springframework.ai.reader.pdf.PagePdfDocumentReader;
+import org.springframework.ai.reader.pdf.config.PdfDocumentReaderConfig;
+import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
@@ -24,7 +28,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class IngestionService {
 
     private static final Logger log = LoggerFactory.getLogger(IngestionService.class);
-    public static final String KYOTO_DATA_PATH = "classpath:data/kyoto/kyoto_travel_knowledge.json";
 
     private final VectorStore vectorStore;
     private final ResourceLoader resourceLoader;
@@ -174,7 +177,7 @@ public class IngestionService {
     }
 
     /**
-     * Ingest documents from an uploaded file (JSON, TXT, or Markdown).
+     * Ingest documents from an uploaded file (PDF, JSON, TXT, or Markdown).
      */
     public synchronized int ingestFile(MultipartFile file, String fallbackDestination) throws Exception {
         if (file == null || file.isEmpty()) {
@@ -186,6 +189,61 @@ public class IngestionService {
                 ? fallbackDestination.trim()
                 : "General";
 
+        // 1. PDF File Ingestion
+        if (filename.endsWith(".pdf") || (file.getContentType() != null && file.getContentType().equalsIgnoreCase("application/pdf"))) {
+            ByteArrayResource resource = new ByteArrayResource(file.getBytes(), file.getOriginalFilename());
+            PagePdfDocumentReader pdfReader = new PagePdfDocumentReader(
+                    resource,
+                    PdfDocumentReaderConfig.builder()
+                            .withPageTopMargin(0)
+                            .withPageBottomMargin(0)
+                            .build()
+            );
+
+            List<Document> pageDocs = pdfReader.get();
+            if (pageDocs.isEmpty()) {
+                log.warn("No text content could be extracted from PDF: {}", file.getOriginalFilename());
+                return 0;
+            }
+
+            TokenTextSplitter splitter = TokenTextSplitter.builder().build();
+            List<Document> splitDocs = splitter.apply(pageDocs);
+
+            List<Document> enrichedDocs = splitDocs.stream()
+                    .filter(doc -> doc.getText() != null && !doc.getText().isBlank())
+                    .map(doc -> {
+                        Map<String, Object> metadata = new HashMap<>(doc.getMetadata());
+                        metadata.put("destination", resolvedDestination);
+                        metadata.put("type", "travel_guide");
+                        metadata.put("source_filename", file.getOriginalFilename());
+
+                        StringBuilder textBuilder = new StringBuilder();
+                        textBuilder.append("Destination: ").append(resolvedDestination).append("\n");
+                        textBuilder.append("Source: ").append(file.getOriginalFilename()).append("\n\n");
+                        textBuilder.append(doc.getText().trim());
+
+                        return new Document(
+                                UUID.randomUUID().toString(),
+                                textBuilder.toString(),
+                                metadata
+                        );
+                    })
+                    .toList();
+
+            if (enrichedDocs.isEmpty()) {
+                return 0;
+            }
+
+            vectorStore.add(enrichedDocs);
+            ingestedDocumentCount.addAndGet(enrichedDocs.size());
+            destinationDocumentCounts.merge(resolvedDestination, enrichedDocs.size(), Integer::sum);
+
+            log.info("Successfully parsed, split, and ingested {} chunks from PDF [{}] for destination [{}]",
+                    enrichedDocs.size(), file.getOriginalFilename(), resolvedDestination);
+            return enrichedDocs.size();
+        }
+
+        // 2. JSON File Ingestion
         if (filename.endsWith(".json") || (file.getContentType() != null && file.getContentType().contains("json"))) {
             JsonNode rootNode;
             try (InputStream is = file.getInputStream()) {
@@ -230,21 +288,21 @@ public class IngestionService {
             } else {
                 throw new IllegalArgumentException("Unsupported JSON structure for ingestion.");
             }
-        } else {
-            // Treat as TXT / Markdown
-            String text = new String(file.getBytes(), StandardCharsets.UTF_8);
-            String[] sections = text.split("(?m)^\\s*$\\n+");
-            List<String> articles = Arrays.stream(sections)
-                    .map(String::trim)
-                    .filter(s -> !s.isBlank())
-                    .toList();
-
-            if (articles.isEmpty()) {
-                articles = List.of(text.trim());
-            }
-
-            return ingestDestinationKnowledge(articles, resolvedDestination);
         }
+
+        // 3. TXT / Markdown File Ingestion
+        String text = new String(file.getBytes(), StandardCharsets.UTF_8);
+        String[] sections = text.split("(?m)^\\s*$\\n+");
+        List<String> articles = Arrays.stream(sections)
+                .map(String::trim)
+                .filter(s -> !s.isBlank())
+                .toList();
+
+        if (articles.isEmpty()) {
+            articles = List.of(text.trim());
+        }
+
+        return ingestDestinationKnowledge(articles, resolvedDestination);
     }
 
     /**
@@ -273,21 +331,13 @@ public class IngestionService {
      * Preloads curated destination knowledge from a classpath resource or file path.
      */
     public synchronized int ingestPreloadedKnowledge(String destination, String resourcePath) {
+        String resolvedDest = (destination != null && !destination.isBlank()) ? destination.trim() : "General";
         String path = (resourcePath != null && !resourcePath.isBlank())
                 ? resourcePath
-                : (destination != null && destination.equalsIgnoreCase("Kyoto")
-                ? KYOTO_DATA_PATH
-                : "classpath:data/" + destination.toLowerCase() + "/" + destination.toLowerCase() + "_travel_knowledge.json");
+                : "classpath:data/" + resolvedDest.toLowerCase() + "/" + resolvedDest.toLowerCase() + "_travel_knowledge.json";
 
         Resource resource = resourceLoader.getResource(path);
-        return ingestResource(resource, destination);
-    }
-
-    /**
-     * Convenience method for backward compatibility to ingest Kyoto knowledge base.
-     */
-    public synchronized int ingestKyotoKnowledge() {
-        return ingestPreloadedKnowledge("Kyoto", KYOTO_DATA_PATH);
+        return ingestResource(resource, resolvedDest);
     }
 
     /**
@@ -299,10 +349,6 @@ public class IngestionService {
                 .topK(Math.max(1, topK))
                 .build();
         return vectorStore.similaritySearch(request);
-    }
-
-    public boolean isKyotoIngested() {
-        return isDestinationIngested("Kyoto");
     }
 
     public boolean isDestinationIngested(String destination) {

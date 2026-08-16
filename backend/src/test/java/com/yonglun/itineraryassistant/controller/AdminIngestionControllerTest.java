@@ -180,7 +180,6 @@ class AdminIngestionControllerTest {
 
     @Test
     void testStatusEndpoint() throws Exception {
-        when(ingestionService.isKyotoIngested()).thenReturn(true);
         when(ingestionService.getIngestedDocumentCount()).thenReturn(15);
         when(ingestionService.getIngestedDestinations()).thenReturn(Set.of("Kyoto", "Paris"));
         when(ingestionService.getDestinationDocumentCounts()).thenReturn(Map.of("Kyoto", 10, "Paris", 5));

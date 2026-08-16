@@ -23,7 +23,7 @@ extra["springAiVersion"] = "2.0.0"
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-    runtimeOnly("org.postgresql:postgresql")
+    implementation("org.postgresql:postgresql")
     implementation("com.h2database:h2")
 
     // 1. Google GenAI Chat Starter (Provides ChatModel)
@@ -32,10 +32,16 @@ dependencies {
     // 2. Google GenAI Embedding Starter (Provides EmbeddingModel)
     implementation("org.springframework.ai:spring-ai-starter-model-google-genai-embedding")
 
-    // 3. Core Vector Store (Provides VectorStore and SimpleVectorStore)
+    // 3. Vector Store: PgVector Store Core
+    implementation("org.springframework.ai:spring-ai-pgvector-store")
+
+    // 4. PDF Document Reader
+    implementation("org.springframework.ai:spring-ai-pdf-document-reader")
+
+    // 5. Core Vector Store (Provides VectorStore and SimpleVectorStore)
     implementation("org.springframework.ai:spring-ai-vector-store")
 
-    // 4. The Vector Store Advisor (Provides QuestionAnswerAdvisor)
+    // 6. The Vector Store Advisor (Provides QuestionAnswerAdvisor)
     implementation("org.springframework.ai:spring-ai-vector-store-advisor")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")

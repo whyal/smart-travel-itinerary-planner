@@ -171,7 +171,6 @@ public class AdminIngestionController {
     public ResponseEntity<RagStatusResponse> getStatus() {
         return ResponseEntity.ok(new RagStatusResponse(
                 "ready",
-                ingestionService.isKyotoIngested(),
                 ingestionService.getIngestedDocumentCount(),
                 ingestionService.getIngestedDestinations(),
                 ingestionService.getDestinationDocumentCounts()
@@ -197,5 +196,16 @@ public class AdminIngestionController {
                 .toList();
 
         return ResponseEntity.ok(responses);
+    }
+
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<IngestionResponse> handleMaxUploadSizeExceeded(org.springframework.web.multipart.MaxUploadSizeExceededException e) {
+        log.warn("Uploaded file exceeds maximum allowed size: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(new IngestionResponse(
+                "error",
+                "Uploaded file exceeds the maximum allowed file size limit (50MB).",
+                null,
+                0
+        ));
     }
 }
