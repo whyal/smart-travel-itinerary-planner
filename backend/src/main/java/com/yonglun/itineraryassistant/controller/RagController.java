@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping({"/api/v1/rag", "/api/rag"})
+@RequestMapping("/api/rag")
 public class RagController {
 
     private final IngestionService ingestionService;
@@ -49,12 +49,12 @@ public class RagController {
             ));
         }
 
-        ingestionService.ingestDestinationKnowledge(request.articles(), request.destination());
+        int count = ingestionService.ingestDestinationKnowledge(request.articles(), request.destination());
         return ResponseEntity.ok(new IngestionResponse(
                 "success",
-                "Successfully embedded and ingested " + request.articles().size() + " documents for " + request.destination() + ".",
+                "Successfully embedded and ingested " + count + " documents for " + request.destination() + ".",
                 request.destination(),
-                request.articles().size()
+                count
         ));
     }
 
@@ -87,7 +87,9 @@ public class RagController {
         return ResponseEntity.ok(new RagStatusResponse(
                 "ready",
                 ingestionService.isKyotoIngested(),
-                ingestionService.getIngestedDocumentCount()
+                ingestionService.getIngestedDocumentCount(),
+                ingestionService.getIngestedDestinations(),
+                ingestionService.getDestinationDocumentCounts()
         ));
     }
 }

@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping({"/api/v1/itineraries", "/api/itineraries"})
+@RequestMapping("/api/itineraries")
 public class SavedItineraryController {
 
     private final SavedItineraryService service;

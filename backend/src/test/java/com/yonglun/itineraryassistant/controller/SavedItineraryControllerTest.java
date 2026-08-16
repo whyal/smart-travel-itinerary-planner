@@ -61,7 +61,7 @@ class SavedItineraryControllerTest {
                 "2026-08-08T09:24:29.000Z"
         );
 
-        mockMvc.perform(post("/api/v1/itineraries")
+        mockMvc.perform(post("/api/itineraries")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -82,21 +82,21 @@ class SavedItineraryControllerTest {
         SaveItineraryRequest req1 = new SaveItineraryRequest("session-1", "Tokyo", 5, formData, itinerary, "text1", null);
         SaveItineraryRequest req2 = new SaveItineraryRequest("session-2", "Kyoto", 3, formData, itinerary, "text2", null);
 
-        mockMvc.perform(post("/api/v1/itineraries")
+        mockMvc.perform(post("/api/itineraries")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req1))).andExpect(status().isCreated());
 
-        mockMvc.perform(post("/api/v1/itineraries")
+        mockMvc.perform(post("/api/itineraries")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(req2))).andExpect(status().isCreated());
 
         // Get all
-        mockMvc.perform(get("/api/v1/itineraries"))
+        mockMvc.perform(get("/api/itineraries"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)));
 
         // Filter by session-1
-        mockMvc.perform(get("/api/v1/itineraries").param("conversationId", "session-1"))
+        mockMvc.perform(get("/api/itineraries").param("conversationId", "session-1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].conversationId", is("session-1")));

@@ -11,7 +11,7 @@ export interface SaveItineraryPayload {
 }
 
 export async function saveItineraryToDatabase(payload: SaveItineraryPayload): Promise<void> {
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
   const response = await fetch(`${apiBase}/itineraries`, {
     method: "POST",

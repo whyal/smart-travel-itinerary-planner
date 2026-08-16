@@ -1,7 +1,9 @@
 package com.yonglun.itineraryassistant.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yonglun.itineraryassistant.dto.TravelDocumentDto;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
@@ -10,10 +12,12 @@ import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
@@ -26,8 +30,8 @@ public class IngestionService {
     private final ResourceLoader resourceLoader;
     private final ObjectMapper objectMapper;
 
-    private final AtomicBoolean kyotoIngested = new AtomicBoolean(false);
     private final AtomicInteger ingestedDocumentCount = new AtomicInteger(0);
+    private final Map<String, Integer> destinationDocumentCounts = new ConcurrentHashMap<>();
 
     @org.springframework.beans.factory.annotation.Autowired
     public IngestionService(VectorStore vectorStore, ResourceLoader resourceLoader, ObjectMapper objectMapper) {
@@ -37,92 +41,253 @@ public class IngestionService {
     }
 
     /**
-     * Loads curated Kyoto travel knowledge documents from classpath JSON and embeds them into the VectorStore.
+     * Ingests structured travel documents into the VectorStore.
      *
-     * @return Number of documents successfully ingested.
+     * @param items              List of structured travel document items.
+     * @param defaultDestination Default destination tag if item has none specified.
+     * @return Number of documents ingested.
      */
-    public synchronized int ingestKyotoKnowledge() {
-        try {
-            Resource resource = resourceLoader.getResource(KYOTO_DATA_PATH);
-            if (!resource.exists()) {
-                log.warn("Kyoto knowledge data file not found at: {}", KYOTO_DATA_PATH);
-                return 0;
-            }
-
-            List<KyotoDocumentItem> items;
-            try (InputStream is = resource.getInputStream()) {
-                items = objectMapper.readValue(is, new TypeReference<List<KyotoDocumentItem>>() {});
-            }
-
-            if (items == null || items.isEmpty()) {
-                log.warn("No Kyoto document items found in dataset");
-                return 0;
-            }
-
-            List<Document> documents = new ArrayList<>();
-            for (KyotoDocumentItem item : items) {
-                Map<String, Object> metadata = new HashMap<>();
-                metadata.put("destination", "Kyoto");
-                metadata.put("doc_id", item.id());
-                metadata.put("title", item.title());
-                metadata.put("category", item.category());
-                metadata.put("district", item.district());
-                if (item.bestTimeToVisit() != null) {
-                    metadata.put("best_time_to_visit", item.bestTimeToVisit());
-                }
-                if (item.suggestedDuration() != null) {
-                    metadata.put("suggested_duration", item.suggestedDuration());
-                }
-                if (item.tags() != null && !item.tags().isEmpty()) {
-                    metadata.put("tags", String.join(", ", item.tags()));
-                }
-                metadata.put("type", "travel_guide");
-
-                StringBuilder contentBuilder = new StringBuilder();
-                contentBuilder.append("Destination: Kyoto\n");
-                contentBuilder.append("Title: ").append(item.title()).append("\n");
-                contentBuilder.append("District: ").append(item.district()).append("\n");
-                contentBuilder.append("Category: ").append(item.category()).append("\n");
-                if (item.bestTimeToVisit() != null) {
-                    contentBuilder.append("Best Time to Visit: ").append(item.bestTimeToVisit()).append("\n");
-                }
-                if (item.suggestedDuration() != null) {
-                    contentBuilder.append("Suggested Duration: ").append(item.suggestedDuration()).append("\n");
-                }
-                contentBuilder.append("\n").append(item.content());
-
-                Document doc = new Document(item.id(), contentBuilder.toString(), metadata);
-                documents.add(doc);
-            }
-
-            vectorStore.add(documents);
-            kyotoIngested.set(true);
-            ingestedDocumentCount.addAndGet(documents.size());
-            log.info("Successfully ingested {} Kyoto knowledge documents into VectorStore", documents.size());
-            return documents.size();
-        } catch (Exception e) {
-            log.error("Failed to ingest Kyoto knowledge documents", e);
-            throw new RuntimeException("Kyoto knowledge ingestion failed: " + e.getMessage(), e);
+    public synchronized int ingestDocuments(List<TravelDocumentDto> items, String defaultDestination) {
+        if (items == null || items.isEmpty()) {
+            return 0;
         }
+
+        List<Document> documents = new ArrayList<>();
+        Map<String, Integer> batchDestinationCounts = new HashMap<>();
+
+        for (TravelDocumentDto item : items) {
+            if (item == null) continue;
+
+            String destination = (item.destination() != null && !item.destination().isBlank())
+                    ? item.destination().trim()
+                    : (defaultDestination != null && !defaultDestination.isBlank() ? defaultDestination.trim() : "General");
+
+            String docId = (item.id() != null && !item.id().isBlank())
+                    ? item.id().trim()
+                    : UUID.randomUUID().toString();
+
+            Map<String, Object> metadata = new HashMap<>();
+            metadata.put("destination", destination);
+            metadata.put("doc_id", docId);
+            metadata.put("type", "travel_guide");
+
+            if (item.title() != null && !item.title().isBlank()) {
+                metadata.put("title", item.title().trim());
+            }
+            if (item.category() != null && !item.category().isBlank()) {
+                metadata.put("category", item.category().trim());
+            }
+            if (item.district() != null && !item.district().isBlank()) {
+                metadata.put("district", item.district().trim());
+            }
+            if (item.bestTimeToVisit() != null && !item.bestTimeToVisit().isBlank()) {
+                metadata.put("best_time_to_visit", item.bestTimeToVisit().trim());
+            }
+            if (item.suggestedDuration() != null && !item.suggestedDuration().isBlank()) {
+                metadata.put("suggested_duration", item.suggestedDuration().trim());
+            }
+            if (item.tags() != null && !item.tags().isEmpty()) {
+                metadata.put("tags", String.join(", ", item.tags()));
+            }
+            if (item.metadata() != null && !item.metadata().isEmpty()) {
+                metadata.putAll(item.metadata());
+            }
+
+            StringBuilder contentBuilder = new StringBuilder();
+            contentBuilder.append("Destination: ").append(destination).append("\n");
+            if (item.title() != null && !item.title().isBlank()) {
+                contentBuilder.append("Title: ").append(item.title().trim()).append("\n");
+            }
+            if (item.district() != null && !item.district().isBlank()) {
+                contentBuilder.append("District: ").append(item.district().trim()).append("\n");
+            }
+            if (item.category() != null && !item.category().isBlank()) {
+                contentBuilder.append("Category: ").append(item.category().trim()).append("\n");
+            }
+            if (item.bestTimeToVisit() != null && !item.bestTimeToVisit().isBlank()) {
+                contentBuilder.append("Best Time to Visit: ").append(item.bestTimeToVisit().trim()).append("\n");
+            }
+            if (item.suggestedDuration() != null && !item.suggestedDuration().isBlank()) {
+                contentBuilder.append("Suggested Duration: ").append(item.suggestedDuration().trim()).append("\n");
+            }
+
+            if (item.content() != null && !item.content().isBlank()) {
+                contentBuilder.append("\n").append(item.content().trim());
+            }
+
+            Document doc = new Document(docId, contentBuilder.toString().trim(), metadata);
+            documents.add(doc);
+            batchDestinationCounts.merge(destination, 1, Integer::sum);
+        }
+
+        if (documents.isEmpty()) {
+            return 0;
+        }
+
+        vectorStore.add(documents);
+        ingestedDocumentCount.addAndGet(documents.size());
+        batchDestinationCounts.forEach((dest, count) ->
+                destinationDocumentCounts.merge(dest, count, Integer::sum)
+        );
+
+        log.info("Successfully ingested {} structured documents across {} destinations into VectorStore",
+                documents.size(), batchDestinationCounts.keySet());
+        return documents.size();
+    }
+
+    public synchronized int ingestDocuments(List<TravelDocumentDto> items) {
+        return ingestDocuments(items, null);
     }
 
     /**
      * Ingest raw article strings for a specific destination into the VectorStore.
      */
-    public void ingestDestinationKnowledge(List<String> rawArticles, String destination) {
+    public synchronized int ingestDestinationKnowledge(List<String> rawArticles, String destination) {
         if (rawArticles == null || rawArticles.isEmpty()) {
-            return;
+            return 0;
         }
 
+        String resolvedDestination = (destination != null && !destination.isBlank())
+                ? destination.trim()
+                : "General";
+
         List<Document> docs = rawArticles.stream()
+                .filter(content -> content != null && !content.isBlank())
                 .map(content -> new Document(
-                        content,
-                        Map.of("destination", destination, "type", "travel_guide")
+                        UUID.randomUUID().toString(),
+                        content.trim(),
+                        Map.of("destination", resolvedDestination, "type", "travel_guide")
                 ))
                 .toList();
 
+        if (docs.isEmpty()) {
+            return 0;
+        }
+
         vectorStore.add(docs);
         ingestedDocumentCount.addAndGet(docs.size());
+        destinationDocumentCounts.merge(resolvedDestination, docs.size(), Integer::sum);
+
+        log.info("Successfully ingested {} raw article documents for destination [{}] into VectorStore",
+                docs.size(), resolvedDestination);
+        return docs.size();
+    }
+
+    /**
+     * Ingest documents from an uploaded file (JSON, TXT, or Markdown).
+     */
+    public synchronized int ingestFile(MultipartFile file, String fallbackDestination) throws Exception {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("File cannot be empty.");
+        }
+
+        String filename = file.getOriginalFilename() != null ? file.getOriginalFilename().toLowerCase() : "";
+        String resolvedDestination = (fallbackDestination != null && !fallbackDestination.isBlank())
+                ? fallbackDestination.trim()
+                : "General";
+
+        if (filename.endsWith(".json") || (file.getContentType() != null && file.getContentType().contains("json"))) {
+            JsonNode rootNode;
+            try (InputStream is = file.getInputStream()) {
+                rootNode = objectMapper.readTree(is);
+            }
+
+            if (rootNode.isArray()) {
+                if (!rootNode.isEmpty() && rootNode.get(0).isTextual()) {
+                    List<String> articles = new ArrayList<>();
+                    for (JsonNode node : rootNode) {
+                        articles.add(node.asText());
+                    }
+                    return ingestDestinationKnowledge(articles, resolvedDestination);
+                } else {
+                    List<TravelDocumentDto> items = objectMapper.convertValue(
+                            rootNode,
+                            new TypeReference<List<TravelDocumentDto>>() {}
+                    );
+                    return ingestDocuments(items, resolvedDestination);
+                }
+            } else if (rootNode.isObject()) {
+                String targetDest = rootNode.hasNonNull("destination")
+                        ? rootNode.get("destination").asText()
+                        : resolvedDestination;
+
+                if (rootNode.has("documents") && rootNode.get("documents").isArray()) {
+                    List<TravelDocumentDto> items = objectMapper.convertValue(
+                            rootNode.get("documents"),
+                            new TypeReference<List<TravelDocumentDto>>() {}
+                    );
+                    return ingestDocuments(items, targetDest);
+                } else if (rootNode.has("articles") && rootNode.get("articles").isArray()) {
+                    List<String> articles = new ArrayList<>();
+                    for (JsonNode node : rootNode.get("articles")) {
+                        articles.add(node.asText());
+                    }
+                    return ingestDestinationKnowledge(articles, targetDest);
+                } else {
+                    TravelDocumentDto singleDoc = objectMapper.convertValue(rootNode, TravelDocumentDto.class);
+                    return ingestDocuments(List.of(singleDoc), targetDest);
+                }
+            } else {
+                throw new IllegalArgumentException("Unsupported JSON structure for ingestion.");
+            }
+        } else {
+            // Treat as TXT / Markdown
+            String text = new String(file.getBytes(), StandardCharsets.UTF_8);
+            String[] sections = text.split("(?m)^\\s*$\\n+");
+            List<String> articles = Arrays.stream(sections)
+                    .map(String::trim)
+                    .filter(s -> !s.isBlank())
+                    .toList();
+
+            if (articles.isEmpty()) {
+                articles = List.of(text.trim());
+            }
+
+            return ingestDestinationKnowledge(articles, resolvedDestination);
+        }
+    }
+
+    /**
+     * Ingest documents from a Spring Resource.
+     */
+    public synchronized int ingestResource(Resource resource, String fallbackDestination) {
+        try {
+            if (resource == null || !resource.exists()) {
+                log.warn("Knowledge data resource not found: {}", resource);
+                return 0;
+            }
+
+            List<TravelDocumentDto> items;
+            try (InputStream is = resource.getInputStream()) {
+                items = objectMapper.readValue(is, new TypeReference<List<TravelDocumentDto>>() {});
+            }
+
+            return ingestDocuments(items, fallbackDestination);
+        } catch (Exception e) {
+            log.error("Failed to ingest knowledge documents from resource", e);
+            throw new RuntimeException("Knowledge ingestion failed: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Preloads curated destination knowledge from a classpath resource or file path.
+     */
+    public synchronized int ingestPreloadedKnowledge(String destination, String resourcePath) {
+        String path = (resourcePath != null && !resourcePath.isBlank())
+                ? resourcePath
+                : (destination != null && destination.equalsIgnoreCase("Kyoto")
+                ? KYOTO_DATA_PATH
+                : "classpath:data/" + destination.toLowerCase() + "/" + destination.toLowerCase() + "_travel_knowledge.json");
+
+        Resource resource = resourceLoader.getResource(path);
+        return ingestResource(resource, destination);
+    }
+
+    /**
+     * Convenience method for backward compatibility to ingest Kyoto knowledge base.
+     */
+    public synchronized int ingestKyotoKnowledge() {
+        return ingestPreloadedKnowledge("Kyoto", KYOTO_DATA_PATH);
     }
 
     /**
@@ -137,21 +302,26 @@ public class IngestionService {
     }
 
     public boolean isKyotoIngested() {
-        return kyotoIngested.get();
+        return isDestinationIngested("Kyoto");
+    }
+
+    public boolean isDestinationIngested(String destination) {
+        if (destination == null || destination.isBlank()) {
+            return false;
+        }
+        return destinationDocumentCounts.entrySet().stream()
+                .anyMatch(e -> e.getKey().equalsIgnoreCase(destination.trim()) && e.getValue() > 0);
     }
 
     public int getIngestedDocumentCount() {
         return ingestedDocumentCount.get();
     }
 
-    public record KyotoDocumentItem(
-            String id,
-            String title,
-            String category,
-            String district,
-            String content,
-            List<String> tags,
-            String suggestedDuration,
-            String bestTimeToVisit
-    ) {}
+    public Set<String> getIngestedDestinations() {
+        return Collections.unmodifiableSet(destinationDocumentCounts.keySet());
+    }
+
+    public Map<String, Integer> getDestinationDocumentCounts() {
+        return Collections.unmodifiableMap(destinationDocumentCounts);
+    }
 }

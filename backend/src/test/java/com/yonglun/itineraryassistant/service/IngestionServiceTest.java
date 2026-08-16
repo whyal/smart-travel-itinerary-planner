@@ -1,6 +1,7 @@
 package com.yonglun.itineraryassistant.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yonglun.itineraryassistant.dto.TravelDocumentDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,8 +13,11 @@ import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.mock.web.MockMultipartFile;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
@@ -41,7 +45,10 @@ class IngestionServiceTest {
 
         assertThat(count).isGreaterThan(0);
         assertThat(ingestionService.isKyotoIngested()).isTrue();
+        assertThat(ingestionService.isDestinationIngested("Kyoto")).isTrue();
         assertThat(ingestionService.getIngestedDocumentCount()).isEqualTo(count);
+        assertThat(ingestionService.getIngestedDestinations()).contains("Kyoto");
+        assertThat(ingestionService.getDestinationDocumentCounts()).containsEntry("Kyoto", count);
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<Document>> captor = ArgumentCaptor.forClass(List.class);
@@ -50,7 +57,6 @@ class IngestionServiceTest {
         List<Document> capturedDocs = captor.getValue();
         assertThat(capturedDocs).hasSize(count);
 
-        // Verify structure of first document
         Document firstDoc = capturedDocs.getFirst();
         assertThat(firstDoc.getId()).isNotBlank();
         assertThat(firstDoc.getText()).contains("Kyoto");
@@ -62,13 +68,64 @@ class IngestionServiceTest {
     }
 
     @Test
+    void testIngestStructuredDocuments() {
+        TravelDocumentDto doc1 = new TravelDocumentDto(
+                "paris-eiffel",
+                "Paris",
+                "Eiffel Tower Guide",
+                "attraction",
+                "7th Arrondissement",
+                "Iconic iron lattice tower on the Champ de Mars.",
+                List.of("landmark", "view"),
+                "2-3 hours",
+                "Sunset",
+                Map.of("architect", "Gustave Eiffel")
+        );
+        TravelDocumentDto doc2 = new TravelDocumentDto(
+                "paris-louvre",
+                "Paris",
+                "Louvre Museum",
+                "museum",
+                "1st Arrondissement",
+                "World's largest art museum and historic monument.",
+                List.of("art", "mona-lisa"),
+                "3-4 hours",
+                "Wednesday or Friday evening",
+                Map.of()
+        );
+
+        int count = ingestionService.ingestDocuments(List.of(doc1, doc2));
+
+        assertThat(count).isEqualTo(2);
+        assertThat(ingestionService.isDestinationIngested("Paris")).isTrue();
+        assertThat(ingestionService.getIngestedDestinations()).contains("Paris");
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<Document>> captor = ArgumentCaptor.forClass(List.class);
+        verify(vectorStore, times(1)).add(captor.capture());
+
+        List<Document> captured = captor.getValue();
+        assertThat(captured).hasSize(2);
+        assertThat(captured.get(0).getId()).isEqualTo("paris-eiffel");
+        assertThat(captured.get(0).getText()).contains("Destination: Paris", "Eiffel Tower Guide", "Champ de Mars");
+        assertThat(captured.get(0).getMetadata())
+                .containsEntry("destination", "Paris")
+                .containsEntry("title", "Eiffel Tower Guide")
+                .containsEntry("category", "attraction")
+                .containsEntry("architect", "Gustave Eiffel");
+    }
+
+    @Test
     void testIngestDestinationKnowledge() {
         List<String> rawArticles = List.of(
                 "Article 1 about Osaka street food in Dotonbori",
                 "Article 2 about Osaka Castle and gardens"
         );
 
-        ingestionService.ingestDestinationKnowledge(rawArticles, "Osaka");
+        int count = ingestionService.ingestDestinationKnowledge(rawArticles, "Osaka");
+
+        assertThat(count).isEqualTo(2);
+        assertThat(ingestionService.isDestinationIngested("Osaka")).isTrue();
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<Document>> captor = ArgumentCaptor.forClass(List.class);
@@ -81,8 +138,69 @@ class IngestionServiceTest {
     }
 
     @Test
+    void testIngestJsonFileUpload() throws Exception {
+        String jsonContent = """
+                [
+                  {
+                    "id": "tokyo-shibuya",
+                    "destination": "Tokyo",
+                    "title": "Shibuya Crossing",
+                    "category": "attraction",
+                    "district": "Shibuya",
+                    "content": "Famous scramble crossing in front of Shibuya Station.",
+                    "tags": ["crossing", "shopping"]
+                  },
+                  {
+                    "id": "tokyo-sensoji",
+                    "destination": "Tokyo",
+                    "title": "Senso-ji Temple",
+                    "category": "attraction",
+                    "district": "Asakusa",
+                    "content": "Tokyo's oldest and most significant ancient Buddhist temple.",
+                    "tags": ["temple", "asakusa"]
+                  }
+                ]
+                """;
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "tokyo_knowledge.json",
+                "application/json",
+                jsonContent.getBytes(StandardCharsets.UTF_8)
+        );
+
+        int count = ingestionService.ingestFile(file, "Tokyo");
+
+        assertThat(count).isEqualTo(2);
+        assertThat(ingestionService.isDestinationIngested("Tokyo")).isTrue();
+    }
+
+    @Test
+    void testIngestTextFileUpload() throws Exception {
+        String textContent = """
+                Rome Colosseum Guide:
+                The Colosseum is an oval amphitheatre in the centre of the city of Rome, Italy.
+
+                Vatican Museums:
+                The Vatican Museums are the public museums of the Vatican City.
+                """;
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "rome_notes.txt",
+                "text/plain",
+                textContent.getBytes(StandardCharsets.UTF_8)
+        );
+
+        int count = ingestionService.ingestFile(file, "Rome");
+
+        assertThat(count).isEqualTo(2);
+        assertThat(ingestionService.isDestinationIngested("Rome")).isTrue();
+    }
+
+    @Test
     void testSimilaritySearch() {
-        Document mockDoc = new Document("doc-1", "Fushimi Inari Guide", java.util.Map.of("destination", "Kyoto"));
+        Document mockDoc = new Document("doc-1", "Fushimi Inari Guide", Map.of("destination", "Kyoto"));
         when(vectorStore.similaritySearch(any(SearchRequest.class))).thenReturn(List.of(mockDoc));
 
         List<Document> results = ingestionService.similaritySearch("temple", 2);
