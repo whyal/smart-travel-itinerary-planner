@@ -20,12 +20,13 @@ spring:
       genai:
         api-key: ${GEMINI_API_KEY}
         embedding:
-          # Authenticates the EmbeddingModel (Google GenAI text-embedding-004)
+          # Authenticates the EmbeddingModel (Google GenAI embedding)
           api-key: ${GEMINI_API_KEY}
     vectorstore:
       pgvector:
         initialize-schema: true
-        dimensions: 768
+        dimensions: 3072
+        index-type: NONE
         distance-type: COSINE_DISTANCE
         table-name: vector_store
         schema-name: public

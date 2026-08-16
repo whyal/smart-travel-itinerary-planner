@@ -12,9 +12,10 @@ import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.ai.vectorstore.VectorStore;
-import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -37,35 +38,50 @@ public class AiConfig {
                 .build();
     }
 
-    @Bean
-    public VectorStore vectorStore(
-            @Value("${app.vectorstore.type:pgvector}") String vectorStoreType,
-            ObjectProvider<JdbcTemplate> jdbcTemplateProvider,
-            EmbeddingModel embeddingModel) {
+    @Configuration
+    @ConditionalOnClass(name = "org.springframework.ai.vectorstore.pgvector.PgVectorStore")
+    @ConditionalOnProperty(name = "app.vectorstore.type", havingValue = "pgvector", matchIfMissing = true)
+    static class PgVectorStoreConfiguration {
 
-        if ("simple".equalsIgnoreCase(vectorStoreType)) {
-            log.info("Using in-memory SimpleVectorStore (app.vectorstore.type=simple).");
-            return SimpleVectorStore.builder(embeddingModel).build();
-        }
+        @Bean
+        public VectorStore vectorStore(
+                JdbcTemplate jdbcTemplate,
+                EmbeddingModel embeddingModel,
+                @Value("${spring.ai.vectorstore.pgvector.dimensions:3072}") int dimensions,
+                @Value("${spring.ai.vectorstore.pgvector.index-type:}") String configuredIndexType) {
 
-        try {
-            JdbcTemplate jdbcTemplate = jdbcTemplateProvider.getIfAvailable();
-            if (jdbcTemplate != null) {
-                log.info("Initializing persistent PgVectorStore (PostgreSQL + pgvector)...");
-                return PgVectorStore.builder(jdbcTemplate, embeddingModel)
-                        .dimensions(768)
-                        .distanceType(PgVectorStore.PgDistanceType.COSINE_DISTANCE)
-                        .schemaName("public")
-                        .vectorTableName("vector_store")
-                        .initializeSchema(true)
-                        .build();
+            org.springframework.ai.vectorstore.pgvector.PgVectorStore.PgIndexType indexType;
+            if (configuredIndexType != null && !configuredIndexType.isBlank()) {
+                indexType = org.springframework.ai.vectorstore.pgvector.PgVectorStore.PgIndexType.valueOf(configuredIndexType.trim().toUpperCase());
             } else {
-                log.warn("JdbcTemplate unavailable. Falling back to in-memory SimpleVectorStore.");
-                return SimpleVectorStore.builder(embeddingModel).build();
+                // pgvector HNSW & IVFFLAT indexes have a hard limit of 2,000 dimensions in PostgreSQL.
+                // For high-dimensional embeddings (>2000, e.g. 3072-dim Gemini), use NONE to allow exact vector operations without index limits.
+                indexType = (dimensions > 2000)
+                        ? org.springframework.ai.vectorstore.pgvector.PgVectorStore.PgIndexType.NONE
+                        : org.springframework.ai.vectorstore.pgvector.PgVectorStore.PgIndexType.HNSW;
             }
-        } catch (Exception e) {
-            log.warn("Failed to initialize PgVectorStore ({}: {}). Falling back to in-memory SimpleVectorStore.",
-                    e.getClass().getSimpleName(), e.getMessage());
+
+            log.info("Initializing persistent PgVectorStore (PostgreSQL + pgvector with {} dimensions, indexType: {})...",
+                    dimensions, indexType);
+
+            return org.springframework.ai.vectorstore.pgvector.PgVectorStore.builder(jdbcTemplate, embeddingModel)
+                    .dimensions(dimensions)
+                    .distanceType(org.springframework.ai.vectorstore.pgvector.PgVectorStore.PgDistanceType.COSINE_DISTANCE)
+                    .indexType(indexType)
+                    .schemaName("public")
+                    .vectorTableName("vector_store")
+                    .initializeSchema(true)
+                    .build();
+        }
+    }
+
+    @Configuration
+    static class FallbackVectorStoreConfiguration {
+
+        @Bean
+        @ConditionalOnMissingBean(VectorStore.class)
+        public VectorStore fallbackVectorStore(EmbeddingModel embeddingModel) {
+            log.info("Initializing in-memory SimpleVectorStore.");
             return SimpleVectorStore.builder(embeddingModel).build();
         }
     }

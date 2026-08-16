@@ -12,7 +12,7 @@ It exposes both a synchronous structured JSON endpoint and a reactive Server-Sen
   - **Synchronous (`/api/itinerary/generate`):** Uses Spring AI's `.entity()` mapping to return strongly-typed Java Records.
   - **Reactive Streaming (`/api/itinerary/stream`):** Uses Spring WebFlux and `Flux<String>` to stream raw JSON tokens over SSE as the LLM generates them.
 - **Provider-Level Structured Output:** Enforces strict native JSON mode on Google GenAI (`.useProviderStructuredOutput()`), eliminating markdown wrapper artifacts, conversational filler, and Jackson parsing exceptions.
-- **Context-Aware RAG with Persistent `PgVectorStore`:** Persists document embeddings (768 dimensions from Google Gemini `text-embedding-004`) directly in PostgreSQL via the `pgvector` extension for persistent similarity retrieval across application restarts.
+- **Context-Aware RAG with Persistent `PgVectorStore`:** Persists document embeddings (3072 dimensions from Google Gemini Embedding Model) directly in PostgreSQL via the `pgvector` extension for persistent similarity retrieval across application restarts.
 - **Destination-Agnostic Knowledge Base:** Embeds structured and raw knowledge documents for any destination (e.g. Kyoto, Tokyo, Paris, Rome, Seoul, etc.).
 - **Admin Ingestion REST API (`/api/admin/ingest`):**
   - `POST /api/admin/ingest/documents`: Ingests an array of structured travel documents with rich metadata (title, category, district, duration, best time, tags).
