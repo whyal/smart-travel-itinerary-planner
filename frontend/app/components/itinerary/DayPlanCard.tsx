@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar, Clock, MapPin } from "lucide-react";
+import { Calendar, Clock, MapPin, Navigation, Clock3 } from "lucide-react";
 import { DayPlan } from "../../types/itinerary";
 
 interface DayPlanCardProps {
@@ -36,7 +36,7 @@ export default function DayPlanCard({ day }: DayPlanCardProps) {
             <div className="p-2 bg-blue-50 text-blue-600 rounded-xl shrink-0 mt-0.5">
               <Clock className="w-4 h-4" />
             </div>
-            <div className="space-y-1 text-sm flex-1">
+            <div className="space-y-2 text-sm flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-bold text-blue-600 font-mono text-xs bg-blue-50 px-2 py-0.5 rounded-md">
                   {act.time}
@@ -47,9 +47,27 @@ export default function DayPlanCard({ day }: DayPlanCardProps) {
                   <span>{act.location}</span>
                 </span>
               </div>
-              <p className="text-slate-600 leading-relaxed text-sm pt-0.5">
+
+              <p className="text-slate-600 leading-relaxed text-sm">
                 {act.description}
               </p>
+
+              {(act.gettingThere || act.operatingHours) && (
+                <div className="flex flex-wrap gap-2 pt-1 border-t border-slate-100 text-xs">
+                  {act.gettingThere && (
+                    <div className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/70 font-medium">
+                      <Navigation className="w-3 h-3 text-emerald-600 shrink-0" />
+                      <span>{act.gettingThere}</span>
+                    </div>
+                  )}
+                  {act.operatingHours && (
+                    <div className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-amber-50 text-amber-800 border border-amber-200/70 font-medium">
+                      <Clock3 className="w-3 h-3 text-amber-600 shrink-0" />
+                      <span>{act.operatingHours}</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         ))}

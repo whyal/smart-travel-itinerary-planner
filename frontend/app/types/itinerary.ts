@@ -2,6 +2,8 @@ export interface Activity {
   time: string;
   location: string;
   description: string;
+  gettingThere?: string;
+  operatingHours?: string;
 }
 
 export interface DayPlan {

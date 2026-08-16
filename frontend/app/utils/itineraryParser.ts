@@ -235,6 +235,24 @@ export function normalizeItinerary(
             typeof a === "object" && a !== null ? a : {}
           ) as Record<string, unknown>;
 
+          const gettingThere = cleanStringValue(
+            actObj.gettingThere ||
+              actObj.getting_there ||
+              actObj.transit ||
+              actObj.transport ||
+              actObj.howToGetThere ||
+              actObj.how_to_get_there ||
+              ""
+          );
+          const operatingHours = cleanStringValue(
+            actObj.operatingHours ||
+              actObj.operating_hours ||
+              actObj.openingHours ||
+              actObj.opening_hours ||
+              actObj.hours ||
+              ""
+          );
+
           return {
             time: cleanStringValue(
               actObj.time || actObj.timeOfDay || actObj.time_of_day || actObj.hour || "Flexible"
@@ -245,6 +263,8 @@ export function normalizeItinerary(
             description: cleanStringValue(
               actObj.description || actObj.details || actObj.activity || actObj.title || actObj.name || ""
             ),
+            ...(gettingThere ? { gettingThere } : {}),
+            ...(operatingHours ? { operatingHours } : {}),
           };
         })
       : [];
