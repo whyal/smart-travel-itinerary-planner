@@ -5,7 +5,6 @@ import com.yonglun.itineraryassistant.dto.IngestionResponse;
 import com.yonglun.itineraryassistant.dto.RagDocumentResponse;
 import com.yonglun.itineraryassistant.dto.RagStatusResponse;
 import com.yonglun.itineraryassistant.service.IngestionService;
-import org.springframework.ai.document.Document;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,9 +20,6 @@ public class RagController {
         this.ingestionService = ingestionService;
     }
 
-    /**
-     * Ingest custom articles/documents dynamically for any destination.
-     */
     @PostMapping(value = {"/ingest", "/ingest/custom"})
     public ResponseEntity<IngestionResponse> ingestCustomKnowledge(@RequestBody CustomIngestionRequest request) {
         if (request == null || request.articles() == null || request.articles().isEmpty()) {
@@ -44,30 +40,18 @@ public class RagController {
         ));
     }
 
-    /**
-     * Search the vector store directly to inspect and verify RAG retrieval results.
-     */
     @GetMapping("/similarity-search")
     public ResponseEntity<List<RagDocumentResponse>> searchKnowledge(
             @RequestParam String query,
             @RequestParam(defaultValue = "4") int topK) {
 
-        List<Document> documents = ingestionService.similaritySearch(query, topK);
-        List<RagDocumentResponse> responses = documents.stream()
-                .map(doc -> new RagDocumentResponse(
-                        doc.getId(),
-                        doc.getText(),
-                        doc.getMetadata(),
-                        doc.getScore()
-                ))
+        List<RagDocumentResponse> responses = ingestionService.similaritySearch(query, topK).stream()
+                .map(doc -> new RagDocumentResponse(doc.getId(), doc.getText(), doc.getMetadata(), doc.getScore()))
                 .toList();
 
         return ResponseEntity.ok(responses);
     }
 
-    /**
-     * Check the status of the RAG vector store and ingestion state.
-     */
     @GetMapping("/status")
     public ResponseEntity<RagStatusResponse> getStatus() {
         return ResponseEntity.ok(new RagStatusResponse(
@@ -78,3 +62,4 @@ public class RagController {
         ));
     }
 }
+

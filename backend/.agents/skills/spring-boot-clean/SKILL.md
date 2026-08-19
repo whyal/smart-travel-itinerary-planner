@@ -1,5 +1,5 @@
 ---
-name: Spring Boot Clean Architecture
+name: spring-boot-clean
 description: Strict rules for generating flat, minimalist Spring Boot Java code without enterprise bloat. Use this whenever generating or refactoring Java backend code.
 ---
 

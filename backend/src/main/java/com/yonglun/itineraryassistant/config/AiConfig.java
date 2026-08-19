@@ -12,9 +12,8 @@ import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -38,52 +37,39 @@ public class AiConfig {
                 .build();
     }
 
-    @Configuration
-    @ConditionalOnClass(name = "org.springframework.ai.vectorstore.pgvector.PgVectorStore")
-    @ConditionalOnProperty(name = "app.vectorstore.type", havingValue = "pgvector", matchIfMissing = true)
-    static class PgVectorStoreConfiguration {
-
-        @Bean
-        public VectorStore vectorStore(
-                JdbcTemplate jdbcTemplate,
-                EmbeddingModel embeddingModel,
-                @Value("${spring.ai.vectorstore.pgvector.dimensions:3072}") int dimensions,
-                @Value("${spring.ai.vectorstore.pgvector.index-type:}") String configuredIndexType) {
-
-            org.springframework.ai.vectorstore.pgvector.PgVectorStore.PgIndexType indexType;
-            if (configuredIndexType != null && !configuredIndexType.isBlank()) {
-                indexType = org.springframework.ai.vectorstore.pgvector.PgVectorStore.PgIndexType.valueOf(configuredIndexType.trim().toUpperCase());
-            } else {
-                // pgvector HNSW & IVFFLAT indexes have a hard limit of 2,000 dimensions in PostgreSQL.
-                // For high-dimensional embeddings (>2000, e.g. 3072-dim Gemini), use NONE to allow exact vector operations without index limits.
-                indexType = (dimensions > 2000)
-                        ? org.springframework.ai.vectorstore.pgvector.PgVectorStore.PgIndexType.NONE
-                        : org.springframework.ai.vectorstore.pgvector.PgVectorStore.PgIndexType.HNSW;
-            }
-
-            log.info("Initializing persistent PgVectorStore (PostgreSQL + pgvector with {} dimensions, indexType: {})...",
-                    dimensions, indexType);
-
-            return org.springframework.ai.vectorstore.pgvector.PgVectorStore.builder(jdbcTemplate, embeddingModel)
-                    .dimensions(dimensions)
-                    .distanceType(org.springframework.ai.vectorstore.pgvector.PgVectorStore.PgDistanceType.COSINE_DISTANCE)
-                    .indexType(indexType)
-                    .schemaName("public")
-                    .vectorTableName("vector_store")
-                    .initializeSchema(true)
-                    .build();
-        }
+    @Bean
+    @ConditionalOnProperty(name = "app.vectorstore.type", havingValue = "simple")
+    public VectorStore simpleVectorStore(EmbeddingModel embeddingModel) {
+        log.info("Initializing in-memory SimpleVectorStore.");
+        return SimpleVectorStore.builder(embeddingModel).build();
     }
 
-    @Configuration
-    static class FallbackVectorStoreConfiguration {
+    @Bean
+    @ConditionalOnProperty(name = "app.vectorstore.type", havingValue = "pgvector", matchIfMissing = true)
+    public VectorStore pgVectorStore(
+            JdbcTemplate jdbcTemplate,
+            EmbeddingModel embeddingModel,
+            @Value("${spring.ai.vectorstore.pgvector.dimensions:3072}") int dimensions,
+            @Value("${spring.ai.vectorstore.pgvector.index-type:}") String configuredIndexType) {
 
-        @Bean
-        @ConditionalOnMissingBean(VectorStore.class)
-        public VectorStore fallbackVectorStore(EmbeddingModel embeddingModel) {
-            log.info("Initializing in-memory SimpleVectorStore.");
-            return SimpleVectorStore.builder(embeddingModel).build();
+        PgVectorStore.PgIndexType indexType;
+        if (configuredIndexType != null && !configuredIndexType.isBlank()) {
+            indexType = PgVectorStore.PgIndexType.valueOf(configuredIndexType.trim().toUpperCase());
+        } else {
+            indexType = (dimensions > 2000) ? PgVectorStore.PgIndexType.NONE : PgVectorStore.PgIndexType.HNSW;
         }
+
+        log.info("Initializing persistent PgVectorStore (PostgreSQL + pgvector with {} dimensions, indexType: {})...",
+                dimensions, indexType);
+
+        return PgVectorStore.builder(jdbcTemplate, embeddingModel)
+                .dimensions(dimensions)
+                .distanceType(PgVectorStore.PgDistanceType.COSINE_DISTANCE)
+                .indexType(indexType)
+                .schemaName("public")
+                .vectorTableName("vector_store")
+                .initializeSchema(true)
+                .build();
     }
 
     @Bean

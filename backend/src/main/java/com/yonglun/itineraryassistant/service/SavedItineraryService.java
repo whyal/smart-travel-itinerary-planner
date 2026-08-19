@@ -21,55 +21,25 @@ public class SavedItineraryService {
     private final SavedItineraryRepository repository;
     private final ObjectMapper objectMapper;
 
-    public SavedItineraryService(SavedItineraryRepository repository, Optional<ObjectMapper> objectMapper) {
+    public SavedItineraryService(SavedItineraryRepository repository, ObjectMapper objectMapper) {
         this.repository = repository;
-        this.objectMapper = objectMapper.orElseGet(ObjectMapper::new);
+        this.objectMapper = objectMapper;
     }
 
     @Transactional
     public SavedItineraryResponse saveItinerary(SaveItineraryRequest request) {
-        String formDataJson = null;
-        if (request.formData() != null) {
-            try {
-                formDataJson = objectMapper.writeValueAsString(request.formData());
-            } catch (JsonProcessingException e) {
-                formDataJson = "{}";
-            }
-        }
-
-        String itineraryJson = null;
-        if (request.itinerary() != null) {
-            try {
-                itineraryJson = objectMapper.writeValueAsString(request.itinerary());
-            } catch (JsonProcessingException e) {
-                itineraryJson = "{}";
-            }
-        }
-
-        Instant createdAt;
-        if (request.createdAt() != null && !request.createdAt().isBlank()) {
-            try {
-                createdAt = Instant.parse(request.createdAt());
-            } catch (Exception e) {
-                createdAt = Instant.now();
-            }
-        } else {
-            createdAt = Instant.now();
-        }
-
         SavedItinerary entity = new SavedItinerary(
                 null,
                 request.conversationId(),
                 request.destination(),
                 request.daysCount(),
-                formDataJson,
-                itineraryJson,
+                toJson(request.formData()),
+                toJson(request.itinerary()),
                 request.rawText(),
-                createdAt
+                parseInstant(request.createdAt())
         );
 
-        SavedItinerary saved = repository.save(entity);
-        return mapToResponse(saved);
+        return mapToResponse(repository.save(entity));
     }
 
     @Transactional(readOnly = true)
@@ -103,33 +73,44 @@ public class SavedItineraryService {
     }
 
     private SavedItineraryResponse mapToResponse(SavedItinerary entity) {
-        ItineraryFormDataDto formData = null;
-        if (entity.getFormDataJson() != null && !entity.getFormDataJson().isBlank()) {
-            try {
-                formData = objectMapper.readValue(entity.getFormDataJson(), ItineraryFormDataDto.class);
-            } catch (JsonProcessingException e) {
-                // ignore parsing failure
-            }
-        }
-
-        Itinerary itinerary = null;
-        if (entity.getItineraryJson() != null && !entity.getItineraryJson().isBlank()) {
-            try {
-                itinerary = objectMapper.readValue(entity.getItineraryJson(), Itinerary.class);
-            } catch (JsonProcessingException e) {
-                // ignore parsing failure
-            }
-        }
-
         return new SavedItineraryResponse(
                 entity.getId(),
                 entity.getConversationId(),
                 entity.getDestination(),
                 entity.getDaysCount(),
-                formData,
-                itinerary,
+                fromJson(entity.getFormDataJson(), ItineraryFormDataDto.class),
+                fromJson(entity.getItineraryJson(), Itinerary.class),
                 entity.getRawText(),
                 entity.getCreatedAt()
         );
     }
+
+    private String toJson(Object value) {
+        if (value == null) return null;
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (JsonProcessingException e) {
+            return "{}";
+        }
+    }
+
+    private <T> T fromJson(String json, Class<T> clazz) {
+        if (json == null || json.isBlank()) return null;
+        try {
+            return objectMapper.readValue(json, clazz);
+        } catch (JsonProcessingException e) {
+            return null;
+        }
+    }
+
+    private Instant parseInstant(String text) {
+        if (text != null && !text.isBlank()) {
+            try {
+                return Instant.parse(text);
+            } catch (Exception ignored) {
+            }
+        }
+        return Instant.now();
+    }
 }
+

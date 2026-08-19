@@ -36,278 +36,124 @@ public class IngestionService {
     private final AtomicInteger ingestedDocumentCount = new AtomicInteger(0);
     private final Map<String, Integer> destinationDocumentCounts = new ConcurrentHashMap<>();
 
-    @org.springframework.beans.factory.annotation.Autowired
     public IngestionService(VectorStore vectorStore, ResourceLoader resourceLoader, ObjectMapper objectMapper) {
         this.vectorStore = vectorStore;
         this.resourceLoader = resourceLoader;
-        this.objectMapper = objectMapper != null ? objectMapper : new ObjectMapper();
+        this.objectMapper = objectMapper;
     }
 
-    /**
-     * Ingests structured travel documents into the VectorStore.
-     *
-     * @param items              List of structured travel document items.
-     * @param defaultDestination Default destination tag if item has none specified.
-     * @return Number of documents ingested.
-     */
     public synchronized int ingestDocuments(List<TravelDocumentDto> items, String defaultDestination) {
         if (items == null || items.isEmpty()) {
             return 0;
         }
 
         List<Document> documents = new ArrayList<>();
-        Map<String, Integer> batchDestinationCounts = new HashMap<>();
+        Map<String, Integer> batchCounts = new HashMap<>();
 
         for (TravelDocumentDto item : items) {
             if (item == null) continue;
-
-            String destination = (item.destination() != null && !item.destination().isBlank())
-                    ? item.destination().trim()
-                    : (defaultDestination != null && !defaultDestination.isBlank() ? defaultDestination.trim() : "General");
-
-            String docId = (item.id() != null && !item.id().isBlank())
-                    ? item.id().trim()
-                    : UUID.randomUUID().toString();
-
-            Map<String, Object> metadata = new HashMap<>();
-            metadata.put("destination", destination);
-            metadata.put("doc_id", docId);
-            metadata.put("type", "travel_guide");
-
-            if (item.title() != null && !item.title().isBlank()) {
-                metadata.put("title", item.title().trim());
-            }
-            if (item.category() != null && !item.category().isBlank()) {
-                metadata.put("category", item.category().trim());
-            }
-            if (item.district() != null && !item.district().isBlank()) {
-                metadata.put("district", item.district().trim());
-            }
-            if (item.bestTimeToVisit() != null && !item.bestTimeToVisit().isBlank()) {
-                metadata.put("best_time_to_visit", item.bestTimeToVisit().trim());
-            }
-            if (item.suggestedDuration() != null && !item.suggestedDuration().isBlank()) {
-                metadata.put("suggested_duration", item.suggestedDuration().trim());
-            }
-            if (item.tags() != null && !item.tags().isEmpty()) {
-                metadata.put("tags", String.join(", ", item.tags()));
-            }
-            if (item.metadata() != null && !item.metadata().isEmpty()) {
-                metadata.putAll(item.metadata());
-            }
-
-            StringBuilder contentBuilder = new StringBuilder();
-            contentBuilder.append("Destination: ").append(destination).append("\n");
-            if (item.title() != null && !item.title().isBlank()) {
-                contentBuilder.append("Title: ").append(item.title().trim()).append("\n");
-            }
-            if (item.district() != null && !item.district().isBlank()) {
-                contentBuilder.append("District: ").append(item.district().trim()).append("\n");
-            }
-            if (item.category() != null && !item.category().isBlank()) {
-                contentBuilder.append("Category: ").append(item.category().trim()).append("\n");
-            }
-            if (item.bestTimeToVisit() != null && !item.bestTimeToVisit().isBlank()) {
-                contentBuilder.append("Best Time to Visit: ").append(item.bestTimeToVisit().trim()).append("\n");
-            }
-            if (item.suggestedDuration() != null && !item.suggestedDuration().isBlank()) {
-                contentBuilder.append("Suggested Duration: ").append(item.suggestedDuration().trim()).append("\n");
-            }
-
-            if (item.content() != null && !item.content().isBlank()) {
-                contentBuilder.append("\n").append(item.content().trim());
-            }
-
-            Document doc = new Document(docId, contentBuilder.toString().trim(), metadata);
-            documents.add(doc);
-            batchDestinationCounts.merge(destination, 1, Integer::sum);
+            String dest = hasText(item.destination()) ? item.destination().trim()
+                    : (hasText(defaultDestination) ? defaultDestination.trim() : "General");
+            documents.add(toDocument(item, dest));
+            batchCounts.merge(dest, 1, Integer::sum);
         }
 
-        if (documents.isEmpty()) {
-            return 0;
-        }
-
-        vectorStore.add(documents);
-        ingestedDocumentCount.addAndGet(documents.size());
-        batchDestinationCounts.forEach((dest, count) ->
-                destinationDocumentCounts.merge(dest, count, Integer::sum)
-        );
-
-        log.info("Successfully ingested {} structured documents across {} destinations into VectorStore",
-                documents.size(), batchDestinationCounts.keySet());
-        return documents.size();
+        return recordAndStore(documents, batchCounts);
     }
 
     public synchronized int ingestDocuments(List<TravelDocumentDto> items) {
         return ingestDocuments(items, null);
     }
 
-    /**
-     * Ingest raw article strings for a specific destination into the VectorStore.
-     */
     public synchronized int ingestDestinationKnowledge(List<String> rawArticles, String destination) {
         if (rawArticles == null || rawArticles.isEmpty()) {
             return 0;
         }
 
-        String resolvedDestination = (destination != null && !destination.isBlank())
-                ? destination.trim()
-                : "General";
-
+        String dest = hasText(destination) ? destination.trim() : "General";
         List<Document> docs = rawArticles.stream()
-                .filter(content -> content != null && !content.isBlank())
+                .filter(this::hasText)
                 .map(content -> new Document(
                         UUID.randomUUID().toString(),
                         content.trim(),
-                        Map.of("destination", resolvedDestination, "type", "travel_guide")
+                        Map.of("destination", dest, "type", "travel_guide")
                 ))
                 .toList();
 
-        if (docs.isEmpty()) {
-            return 0;
-        }
-
-        vectorStore.add(docs);
-        ingestedDocumentCount.addAndGet(docs.size());
-        destinationDocumentCounts.merge(resolvedDestination, docs.size(), Integer::sum);
-
-        log.info("Successfully ingested {} raw article documents for destination [{}] into VectorStore",
-                docs.size(), resolvedDestination);
-        return docs.size();
+        return recordAndStore(docs, Map.of(dest, docs.size()));
     }
 
-    /**
-     * Ingest documents from an uploaded file (PDF, JSON, TXT, or Markdown).
-     */
     public synchronized int ingestFile(MultipartFile file, String fallbackDestination) throws Exception {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("File cannot be empty.");
         }
 
         String filename = file.getOriginalFilename() != null ? file.getOriginalFilename().toLowerCase() : "";
-        String resolvedDestination = (fallbackDestination != null && !fallbackDestination.isBlank())
-                ? fallbackDestination.trim()
-                : "General";
+        String dest = hasText(fallbackDestination) ? fallbackDestination.trim() : "General";
 
         // 1. PDF File Ingestion
-        if (filename.endsWith(".pdf") || (file.getContentType() != null && file.getContentType().equalsIgnoreCase("application/pdf"))) {
+        if (filename.endsWith(".pdf") || "application/pdf".equalsIgnoreCase(file.getContentType())) {
             ByteArrayResource resource = new ByteArrayResource(file.getBytes(), file.getOriginalFilename());
-            PagePdfDocumentReader pdfReader = new PagePdfDocumentReader(
-                    resource,
-                    PdfDocumentReaderConfig.builder()
-                            .withPageTopMargin(0)
-                            .withPageBottomMargin(0)
-                            .build()
-            );
-
-            List<Document> pageDocs = pdfReader.get();
-            if (pageDocs.isEmpty()) {
-                log.warn("No text content could be extracted from PDF: {}", file.getOriginalFilename());
-                return 0;
-            }
-
-            TokenTextSplitter splitter = TokenTextSplitter.builder().build();
-            List<Document> splitDocs = splitter.apply(pageDocs);
+            PagePdfDocumentReader reader = new PagePdfDocumentReader(resource, PdfDocumentReaderConfig.builder().build());
+            List<Document> splitDocs = TokenTextSplitter.builder().build().apply(reader.get());
 
             List<Document> enrichedDocs = splitDocs.stream()
-                    .filter(doc -> doc.getText() != null && !doc.getText().isBlank())
+                    .filter(doc -> hasText(doc.getText()))
                     .map(doc -> {
-                        Map<String, Object> metadata = new HashMap<>(doc.getMetadata());
-                        metadata.put("destination", resolvedDestination);
-                        metadata.put("type", "travel_guide");
-                        metadata.put("source_filename", file.getOriginalFilename());
-
-                        StringBuilder textBuilder = new StringBuilder();
-                        textBuilder.append("Destination: ").append(resolvedDestination).append("\n");
-                        textBuilder.append("Source: ").append(file.getOriginalFilename()).append("\n\n");
-                        textBuilder.append(doc.getText().trim());
-
-                        return new Document(
-                                UUID.randomUUID().toString(),
-                                textBuilder.toString(),
-                                metadata
-                        );
+                        Map<String, Object> meta = new HashMap<>(doc.getMetadata());
+                        meta.put("destination", dest);
+                        meta.put("type", "travel_guide");
+                        meta.put("source_filename", file.getOriginalFilename());
+                        String content = "Destination: " + dest + "\nSource: " + file.getOriginalFilename() + "\n\n" + doc.getText().trim();
+                        return new Document(UUID.randomUUID().toString(), content, meta);
                     })
                     .toList();
 
-            if (enrichedDocs.isEmpty()) {
-                return 0;
-            }
-
-            vectorStore.add(enrichedDocs);
-            ingestedDocumentCount.addAndGet(enrichedDocs.size());
-            destinationDocumentCounts.merge(resolvedDestination, enrichedDocs.size(), Integer::sum);
-
-            log.info("Successfully parsed, split, and ingested {} chunks from PDF [{}] for destination [{}]",
-                    enrichedDocs.size(), file.getOriginalFilename(), resolvedDestination);
-            return enrichedDocs.size();
+            return recordAndStore(enrichedDocs, Map.of(dest, enrichedDocs.size()));
         }
 
         // 2. JSON File Ingestion
         if (filename.endsWith(".json") || (file.getContentType() != null && file.getContentType().contains("json"))) {
-            JsonNode rootNode;
+            JsonNode root;
             try (InputStream is = file.getInputStream()) {
-                rootNode = objectMapper.readTree(is);
+                root = objectMapper.readTree(is);
             }
 
-            if (rootNode.isArray()) {
-                if (!rootNode.isEmpty() && rootNode.get(0).isTextual()) {
-                    List<String> articles = new ArrayList<>();
-                    for (JsonNode node : rootNode) {
-                        articles.add(node.asText());
-                    }
-                    return ingestDestinationKnowledge(articles, resolvedDestination);
-                } else {
-                    List<TravelDocumentDto> items = objectMapper.convertValue(
-                            rootNode,
-                            new TypeReference<List<TravelDocumentDto>>() {}
-                    );
-                    return ingestDocuments(items, resolvedDestination);
+            if (root.isArray()) {
+                if (!root.isEmpty() && root.get(0).isTextual()) {
+                    List<String> articles = objectMapper.convertValue(root, new TypeReference<List<String>>() {});
+                    return ingestDestinationKnowledge(articles, dest);
                 }
-            } else if (rootNode.isObject()) {
-                String targetDest = rootNode.hasNonNull("destination")
-                        ? rootNode.get("destination").asText()
-                        : resolvedDestination;
+                List<TravelDocumentDto> items = objectMapper.convertValue(root, new TypeReference<List<TravelDocumentDto>>() {});
+                return ingestDocuments(items, dest);
+            }
 
-                if (rootNode.has("documents") && rootNode.get("documents").isArray()) {
-                    List<TravelDocumentDto> items = objectMapper.convertValue(
-                            rootNode.get("documents"),
-                            new TypeReference<List<TravelDocumentDto>>() {}
-                    );
+            if (root.isObject()) {
+                String targetDest = root.hasNonNull("destination") ? root.get("destination").asText() : dest;
+                if (root.has("documents")) {
+                    List<TravelDocumentDto> items = objectMapper.convertValue(root.get("documents"), new TypeReference<List<TravelDocumentDto>>() {});
                     return ingestDocuments(items, targetDest);
-                } else if (rootNode.has("articles") && rootNode.get("articles").isArray()) {
-                    List<String> articles = new ArrayList<>();
-                    for (JsonNode node : rootNode.get("articles")) {
-                        articles.add(node.asText());
-                    }
-                    return ingestDestinationKnowledge(articles, targetDest);
-                } else {
-                    TravelDocumentDto singleDoc = objectMapper.convertValue(rootNode, TravelDocumentDto.class);
-                    return ingestDocuments(List.of(singleDoc), targetDest);
                 }
-            } else {
-                throw new IllegalArgumentException("Unsupported JSON structure for ingestion.");
+                if (root.has("articles")) {
+                    List<String> articles = objectMapper.convertValue(root.get("articles"), new TypeReference<List<String>>() {});
+                    return ingestDestinationKnowledge(articles, targetDest);
+                }
+                return ingestDocuments(List.of(objectMapper.convertValue(root, TravelDocumentDto.class)), targetDest);
             }
+
+            throw new IllegalArgumentException("Unsupported JSON structure for ingestion.");
         }
 
-        // 3. TXT / Markdown File Ingestion
+        // 3. Plain Text / Markdown File Ingestion
         String text = new String(file.getBytes(), StandardCharsets.UTF_8);
-        String[] sections = text.split("(?m)^\\s*$\\n+");
-        List<String> articles = Arrays.stream(sections)
+        List<String> articles = Arrays.stream(text.split("(?m)^\\s*$\\n+"))
                 .map(String::trim)
-                .filter(s -> !s.isBlank())
+                .filter(this::hasText)
                 .toList();
 
-        if (articles.isEmpty()) {
-            articles = List.of(text.trim());
-        }
-
-        return ingestDestinationKnowledge(articles, resolvedDestination);
+        return ingestDestinationKnowledge(articles.isEmpty() ? List.of(text.trim()) : articles, dest);
     }
 
-    /**
-     * Ingest documents from a Spring Resource.
-     */
     public synchronized int ingestResource(Resource resource, String fallbackDestination) {
         try {
             if (resource == null || !resource.exists()) {
@@ -315,47 +161,33 @@ public class IngestionService {
                 return 0;
             }
 
-            List<TravelDocumentDto> items;
             try (InputStream is = resource.getInputStream()) {
-                items = objectMapper.readValue(is, new TypeReference<List<TravelDocumentDto>>() {});
+                List<TravelDocumentDto> items = objectMapper.readValue(is, new TypeReference<List<TravelDocumentDto>>() {});
+                return ingestDocuments(items, fallbackDestination);
             }
-
-            return ingestDocuments(items, fallbackDestination);
         } catch (Exception e) {
             log.error("Failed to ingest knowledge documents from resource", e);
             throw new RuntimeException("Knowledge ingestion failed: " + e.getMessage(), e);
         }
     }
 
-    /**
-     * Preloads curated destination knowledge from a classpath resource or file path.
-     */
     public synchronized int ingestPreloadedKnowledge(String destination, String resourcePath) {
-        String resolvedDest = (destination != null && !destination.isBlank()) ? destination.trim() : "General";
-        String path = (resourcePath != null && !resourcePath.isBlank())
+        String dest = hasText(destination) ? destination.trim() : "General";
+        String path = hasText(resourcePath)
                 ? resourcePath
-                : "classpath:data/" + resolvedDest.toLowerCase() + "/" + resolvedDest.toLowerCase() + "_travel_knowledge.json";
+                : "classpath:data/" + dest.toLowerCase() + "/" + dest.toLowerCase() + "_travel_knowledge.json";
 
-        Resource resource = resourceLoader.getResource(path);
-        return ingestResource(resource, resolvedDest);
+        return ingestResource(resourceLoader.getResource(path), dest);
     }
 
-    /**
-     * Perform similarity search on the VectorStore to inspect retrieved documents.
-     */
     public List<Document> similaritySearch(String query, int topK) {
-        SearchRequest request = SearchRequest.builder()
-                .query(query)
-                .topK(Math.max(1, topK))
-                .build();
-        return vectorStore.similaritySearch(request);
+        return vectorStore.similaritySearch(
+                SearchRequest.builder().query(query).topK(Math.max(1, topK)).build()
+        );
     }
 
     public boolean isDestinationIngested(String destination) {
-        if (destination == null || destination.isBlank()) {
-            return false;
-        }
-        return destinationDocumentCounts.entrySet().stream()
+        return hasText(destination) && destinationDocumentCounts.entrySet().stream()
                 .anyMatch(e -> e.getKey().equalsIgnoreCase(destination.trim()) && e.getValue() > 0);
     }
 
@@ -370,4 +202,61 @@ public class IngestionService {
     public Map<String, Integer> getDestinationDocumentCounts() {
         return Collections.unmodifiableMap(destinationDocumentCounts);
     }
+
+    private Document toDocument(TravelDocumentDto item, String destination) {
+        String docId = hasText(item.id()) ? item.id().trim() : UUID.randomUUID().toString();
+
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("destination", destination);
+        metadata.put("doc_id", docId);
+        metadata.put("type", "travel_guide");
+
+        putIfText(metadata, "title", item.title());
+        putIfText(metadata, "category", item.category());
+        putIfText(metadata, "district", item.district());
+        putIfText(metadata, "best_time_to_visit", item.bestTimeToVisit());
+        putIfText(metadata, "suggested_duration", item.suggestedDuration());
+
+        if (item.tags() != null && !item.tags().isEmpty()) {
+            metadata.put("tags", String.join(", ", item.tags()));
+        }
+        if (item.metadata() != null && !item.metadata().isEmpty()) {
+            metadata.putAll(item.metadata());
+        }
+
+        StringBuilder sb = new StringBuilder("Destination: ").append(destination).append("\n");
+        appendField(sb, "Title: ", item.title());
+        appendField(sb, "District: ", item.district());
+        appendField(sb, "Category: ", item.category());
+        appendField(sb, "Best Time to Visit: ", item.bestTimeToVisit());
+        appendField(sb, "Suggested Duration: ", item.suggestedDuration());
+
+        if (hasText(item.content())) {
+            sb.append("\n").append(item.content().trim());
+        }
+
+        return new Document(docId, sb.toString().trim(), metadata);
+    }
+
+    private int recordAndStore(List<Document> docs, Map<String, Integer> counts) {
+        if (docs.isEmpty()) return 0;
+        vectorStore.add(docs);
+        ingestedDocumentCount.addAndGet(docs.size());
+        counts.forEach((dest, count) -> destinationDocumentCounts.merge(dest, count, Integer::sum));
+        log.info("Successfully ingested {} documents into VectorStore for destinations: {}", docs.size(), counts.keySet());
+        return docs.size();
+    }
+
+    private boolean hasText(String str) {
+        return str != null && !str.isBlank();
+    }
+
+    private void putIfText(Map<String, Object> map, String key, String val) {
+        if (hasText(val)) map.put(key, val.trim());
+    }
+
+    private void appendField(StringBuilder sb, String label, String val) {
+        if (hasText(val)) sb.append(label).append(val.trim()).append("\n");
+    }
 }
+
