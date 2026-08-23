@@ -35,7 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockitoExtension.class)
-class AdminIngestionControllerTest {
+class KnowledgeControllerTest {
 
     @Mock
     private IngestionService ingestionService;
@@ -45,7 +45,7 @@ class AdminIngestionControllerTest {
 
     @BeforeEach
     void setUp() {
-        this.mockMvc = MockMvcBuilders.standaloneSetup(new AdminIngestionController(ingestionService)).build();
+        this.mockMvc = MockMvcBuilders.standaloneSetup(new KnowledgeController(ingestionService)).build();
     }
 
     @Test
@@ -65,7 +65,7 @@ class AdminIngestionControllerTest {
 
         when(ingestionService.ingestDocuments(anyList(), any())).thenReturn(1);
 
-        mockMvc.perform(post("/api/admin/ingest/documents")
+        mockMvc.perform(post("/api/knowledge/documents")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(List.of(doc))))
                 .andExpect(status().isOk())
@@ -76,7 +76,7 @@ class AdminIngestionControllerTest {
 
     @Test
     void testIngestDocumentsEmptyValidation() throws Exception {
-        mockMvc.perform(post("/api/admin/ingest/documents")
+        mockMvc.perform(post("/api/knowledge/documents")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("[]"))
                 .andExpect(status().isBadRequest())
@@ -101,7 +101,7 @@ class AdminIngestionControllerTest {
 
         when(ingestionService.ingestDocuments(anyList(), eq("Paris"))).thenReturn(1);
 
-        mockMvc.perform(post("/api/admin/ingest/batch")
+        mockMvc.perform(post("/api/knowledge/batch")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(batch)))
                 .andExpect(status().isOk())
@@ -119,7 +119,7 @@ class AdminIngestionControllerTest {
 
         when(ingestionService.ingestDestinationKnowledge(anyList(), eq("Seoul"))).thenReturn(2);
 
-        mockMvc.perform(post("/api/admin/ingest/articles")
+        mockMvc.perform(post("/api/knowledge/articles")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -139,7 +139,7 @@ class AdminIngestionControllerTest {
 
         when(ingestionService.ingestFile(any(), eq("Paris"))).thenReturn(1);
 
-        mockMvc.perform(multipart("/api/admin/ingest/upload")
+        mockMvc.perform(multipart("/api/knowledge/upload")
                         .file(file)
                         .param("destination", "Paris"))
                 .andExpect(status().isOk())
@@ -156,7 +156,7 @@ class AdminIngestionControllerTest {
                 new byte[0]
         );
 
-        mockMvc.perform(multipart("/api/admin/ingest/upload")
+        mockMvc.perform(multipart("/api/knowledge/upload")
                         .file(file))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status", is("error")));
@@ -166,7 +166,7 @@ class AdminIngestionControllerTest {
     void testPreloadEndpoint() throws Exception {
         when(ingestionService.ingestPreloadedKnowledge(eq("Kyoto"), any())).thenReturn(10);
 
-        mockMvc.perform(post("/api/admin/ingest/preload")
+        mockMvc.perform(post("/api/knowledge/preload")
                         .param("destination", "Kyoto"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status", is("success")))
@@ -180,7 +180,7 @@ class AdminIngestionControllerTest {
         when(ingestionService.getIngestedDestinations()).thenReturn(Set.of("Kyoto", "Paris"));
         when(ingestionService.getDestinationDocumentCounts()).thenReturn(Map.of("Kyoto", 10, "Paris", 5));
 
-        mockMvc.perform(get("/api/admin/ingest/status"))
+        mockMvc.perform(get("/api/knowledge/status"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status", is("ready")))
                 .andExpect(jsonPath("$.totalDocumentsIngested", is(15)))
@@ -194,7 +194,7 @@ class AdminIngestionControllerTest {
         Document doc = new Document("london-eye", "London Eye Observation Wheel", Map.of("destination", "London"));
         when(ingestionService.similaritySearch(anyString(), anyInt())).thenReturn(List.of(doc));
 
-        mockMvc.perform(get("/api/admin/ingest/similarity-search")
+        mockMvc.perform(get("/api/knowledge/similarity-search")
                         .param("query", "London eye wheel")
                         .param("topK", "2"))
                 .andExpect(status().isOk())

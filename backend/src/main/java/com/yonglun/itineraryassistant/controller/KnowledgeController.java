@@ -14,14 +14,14 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/admin/ingest")
-public class AdminIngestionController {
+@RequestMapping({"/api/knowledge", "/api/rag"})
+public class KnowledgeController {
 
-    private static final Logger log = LoggerFactory.getLogger(AdminIngestionController.class);
+    private static final Logger log = LoggerFactory.getLogger(KnowledgeController.class);
 
     private final IngestionService ingestionService;
 
-    public AdminIngestionController(IngestionService ingestionService) {
+    public KnowledgeController(IngestionService ingestionService) {
         this.ingestionService = ingestionService;
     }
 
@@ -63,7 +63,7 @@ public class AdminIngestionController {
         ));
     }
 
-    @PostMapping(value = {"/articles", "/custom"}, consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = {"/articles", "/custom", "/ingest"}, consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<IngestionResponse> ingestArticles(@RequestBody CustomIngestionRequest request) {
         if (request == null || request.articles() == null || request.articles().isEmpty()) {
             return ResponseEntity.badRequest().body(new IngestionResponse(
@@ -150,4 +150,3 @@ public class AdminIngestionController {
         ));
     }
 }
-
