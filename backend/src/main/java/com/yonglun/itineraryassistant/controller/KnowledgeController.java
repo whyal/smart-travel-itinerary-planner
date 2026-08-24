@@ -1,5 +1,6 @@
 package com.yonglun.itineraryassistant.controller;
 
+import com.yonglun.itineraryassistant.config.EmbeddingProperties;
 import com.yonglun.itineraryassistant.dto.*;
 import com.yonglun.itineraryassistant.service.IngestionService;
 import org.slf4j.Logger;
@@ -20,9 +21,13 @@ public class KnowledgeController {
     private static final Logger log = LoggerFactory.getLogger(KnowledgeController.class);
 
     private final IngestionService ingestionService;
+    private final EmbeddingProperties embeddingProperties;
 
-    public KnowledgeController(IngestionService ingestionService) {
+    public KnowledgeController(
+            IngestionService ingestionService,
+            EmbeddingProperties embeddingProperties) {
         this.ingestionService = ingestionService;
+        this.embeddingProperties = embeddingProperties;
     }
 
     @PostMapping(value = "/documents", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -126,7 +131,11 @@ public class KnowledgeController {
                 "ready",
                 ingestionService.getIngestedDocumentCount(),
                 ingestionService.getIngestedDestinations(),
-                ingestionService.getDestinationDocumentCounts()
+                ingestionService.getDestinationDocumentCounts(),
+                embeddingProperties != null ? embeddingProperties.getProvider() : null,
+                embeddingProperties != null ? embeddingProperties.getModel() : null,
+                embeddingProperties != null ? embeddingProperties.getDimensions() : null,
+                embeddingProperties != null ? embeddingProperties.getEffectiveTableName() : null
         ));
     }
 

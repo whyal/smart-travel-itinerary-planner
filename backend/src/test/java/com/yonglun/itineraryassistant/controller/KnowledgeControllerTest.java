@@ -45,7 +45,11 @@ class KnowledgeControllerTest {
 
     @BeforeEach
     void setUp() {
-        this.mockMvc = MockMvcBuilders.standaloneSetup(new KnowledgeController(ingestionService)).build();
+        com.yonglun.itineraryassistant.config.EmbeddingProperties props = new com.yonglun.itineraryassistant.config.EmbeddingProperties();
+        props.setProvider("google");
+        props.setModel("gemini-embedding-001");
+        props.setDimensions(3072);
+        this.mockMvc = MockMvcBuilders.standaloneSetup(new KnowledgeController(ingestionService, props)).build();
     }
 
     @Test

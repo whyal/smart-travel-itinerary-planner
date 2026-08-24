@@ -10,9 +10,17 @@ public record RagStatusResponse(
         String status,
         int totalDocumentsIngested,
         Set<String> destinations,
-        Map<String, Integer> documentCountByDestination
+        Map<String, Integer> documentCountByDestination,
+        String embeddingProvider,
+        String embeddingModel,
+        Integer embeddingDimensions,
+        String vectorTable
 ) {
+    public RagStatusResponse(String status, int totalDocumentsIngested, Set<String> destinations, Map<String, Integer> documentCountByDestination) {
+        this(status, totalDocumentsIngested, destinations, documentCountByDestination, null, null, null, null);
+    }
+
     public RagStatusResponse(String status, int totalDocumentsIngested) {
-        this(status, totalDocumentsIngested, Set.of(), Map.of());
+        this(status, totalDocumentsIngested, Set.of(), Map.of(), null, null, null, null);
     }
 }

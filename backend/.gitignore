@@ -36,4 +36,8 @@ out/
 ### VS Code ###
 .vscode/
 
+### Environment & Secrets ###
 .env
+.env.*
+*.env
+!.env.example

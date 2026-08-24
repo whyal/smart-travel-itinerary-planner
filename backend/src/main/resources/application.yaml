@@ -22,15 +22,33 @@ spring:
         embedding:
           # Authenticates the EmbeddingModel (Google GenAI embedding)
           api-key: ${GEMINI_API_KEY}
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      embedding:
+        model: ${EMBEDDING_MODEL:qwen3-embedding:0.6b}
+    openai:
+      base-url: ${OPENAI_COMPAT_BASE_URL:http://localhost:8000}
+      api-key: ${OPENAI_COMPAT_API_KEY:dummy-key}
+      embedding:
+        options:
+          model: ${EMBEDDING_MODEL:Qwen/Qwen3-Embedding-0.6B}
     vectorstore:
       pgvector:
         initialize-schema: true
-        dimensions: 3072
-        index-type: NONE
         distance-type: COSINE_DISTANCE
-        table-name: vector_store
         schema-name: public
 
 app:
   vectorstore:
-    type: ${VECTORSTORE_TYPE:pgvector}
+    type: ${VECTORSTORE_TYPE:pgvector} # Options: pgvector, simple
+  embedding:
+    # Active Provider: "google" (default), "ollama" (OSS local), "openai-compatible" (TEI / vLLM)
+    provider: ${EMBEDDING_PROVIDER:google}
+    model: ${EMBEDDING_MODEL:gemini-embedding-001}
+    dimensions: ${EMBEDDING_DIMENSIONS:3072}
+    table-name: ${EMBEDDING_TABLE_NAME:} # Optional override. When omitted, auto-routes to vector_store_{provider}_{dimensions}
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+    openai-compatible:
+      base-url: ${OPENAI_COMPAT_BASE_URL:http://localhost:8000}
+      api-key: ${OPENAI_COMPAT_API_KEY:dummy-key}

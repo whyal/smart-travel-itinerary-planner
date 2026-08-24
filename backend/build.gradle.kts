@@ -30,8 +30,10 @@ dependencies {
     // 1. Google GenAI Chat Starter (Provides ChatModel)
     implementation("org.springframework.ai:spring-ai-starter-model-google-genai")
 
-    // 2. Google GenAI Embedding Starter (Provides EmbeddingModel)
+    // 2. Embedding Model Dependencies
     implementation("org.springframework.ai:spring-ai-starter-model-google-genai-embedding")
+    implementation("org.springframework.ai:spring-ai-starter-model-ollama")
+    implementation("org.springframework.ai:spring-ai-openai")
 
     // 3. Vector Store: PgVector Store Core
     implementation("org.springframework.ai:spring-ai-pgvector-store")

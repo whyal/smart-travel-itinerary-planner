@@ -7,9 +7,10 @@ An AI-powered travel planning application that generates personalized itinerarie
 ## ✨ Features
 
 * 🤖 AI-generated travel itineraries
+* 🧠 Modular Embedding Architecture (Google Gemini & local OSS like `Qwen3-Embedding-0.6B`)
 * 🗺️ Personalized recommendations based on budget and interests
 * 📅 Day-by-day itinerary generation
-* 🔌 RESTful API architecture
+* 🔌 RESTful API architecture with SSE Streaming
 
 ---
 
