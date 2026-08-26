@@ -8,7 +8,7 @@ import {
   SaveToDbStatus,
 } from "../types/itinerary";
 import { parseItineraryFromText } from "../utils/itineraryParser";
-import { saveItineraryToDatabase } from "../services/itineraryApi";
+import { API_BASE_URL, saveItineraryToDatabase } from "../services/itineraryApi";
 import {
   getHistoryList,
   saveToHistory,
@@ -274,18 +274,15 @@ Generate a ${formData.days}-day itinerary matching these constraints.`;
     let finalParsedItinerary: ItineraryResponse | null = null;
 
     try {
-      const response = await fetch(
-        "http://localhost:8080/api/itinerary/stream",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "text/event-stream, application/json, text/plain",
-          },
-          body: JSON.stringify(payload),
-          signal: controller.signal,
+      const response = await fetch(`${API_BASE_URL}/itinerary/stream`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "text/event-stream, application/json, text/plain",
         },
-      );
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
 
       if (!response.ok) {
         throw new Error(

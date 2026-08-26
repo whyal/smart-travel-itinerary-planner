@@ -17,9 +17,9 @@ This repository contains the frontend client for the **AI Travel Itinerary Gener
 ### Key Architecture & Features
 - **Backend Integration**: Communicates with a Spring Boot / Spring AI backend service:
   - **SSE Streaming (`text/event-stream`)**: Consumes live streaming itinerary responses to render plans dynamically as the AI generates them.
-  - **REST Persistence API**: Posts saved itineraries (`POST /api/itineraries`) via `saveItineraryToDatabase` in [itineraryApi.ts](file:///home/whyal/Projects/itinerary-planner-fe/app/services/itineraryApi.ts).
+  - **REST Persistence API**: Posts saved itineraries (`POST /api/itineraries`) via `saveItineraryToDatabase` in [itineraryApi.ts](file:///home/whyal/Projects/smart-travel-itinerary-planner/frontend/app/services/itineraryApi.ts).
 - **Session Isolation**: Manages a unique `conversationId` UUID per user session stored in `localStorage` to isolate multi-turn memory in backend Spring AI chat memory advisors.
-- **Parsing & Real-Time Rendering**: Formats raw stream chunks via [itineraryParser.ts](file:///home/whyal/Projects/itinerary-planner-fe/app/utils/itineraryParser.ts) into structured [ItineraryResponse](file:///home/whyal/Projects/itinerary-planner-fe/app/types/itinerary.ts) types, allowing toggleable switching between **Structured View** and **Raw Stream View**.
+- **Parsing & Real-Time Rendering**: Formats raw stream chunks via [itineraryParser.ts](file:///home/whyal/Projects/smart-travel-itinerary-planner/frontend/app/utils/itineraryParser.ts) into structured [ItineraryResponse](file:///home/whyal/Projects/smart-travel-itinerary-planner/frontend/app/types/itinerary.ts) types, allowing toggleable switching between **Structured View** and **Raw Stream View**.
 - **Local History & Persistence**: Supports client-side history via `localStorage` as well as optional automated/manual backend DB persistence.
 
 ---
@@ -82,7 +82,7 @@ Before completing any coding task:
 ## 4. Coding Conventions & Guidelines
 
 ### TypeScript & Types
-- **Strict Typing**: Maintain strict TypeScript checking (`"strict": true` in `tsconfig.json`). Avoid using `any`; define explicit interfaces in [itinerary.ts](file:///home/whyal/Projects/itinerary-planner-fe/app/types/itinerary.ts).
+- **Strict Typing**: Maintain strict TypeScript checking (`"strict": true` in `tsconfig.json`). Avoid using `any`; define explicit interfaces in [itinerary.ts](file:///home/whyal/Projects/smart-travel-itinerary-planner/frontend/app/types/itinerary.ts).
 - **Backend Model Alignment**: Keep TypeScript types in sync 1:1 with backend Spring Boot records (`ItineraryResponse`, `DayPlan`, `Activity`, `ItineraryFormData`).
 - **Path Aliases**: Use `@/*` for imports mapping to the project root (e.g., `@/app/types/itinerary`).
 
@@ -95,7 +95,7 @@ Before completing any coding task:
 
 ### UI & Styling Standards
 - **Tailwind CSS v4**: Use utility-first styling with Tailwind CSS. Follow established color palettes (`slate-50`, `slate-900`, `teal-600`, etc.).
-- **Typography**: Apply Google Font CSS variables (`font-sans`, `font-serif`, `font-mono`) defined in [Fonts.ts](file:///home/whyal/Projects/itinerary-planner-fe/app/lib/Fonts.ts).
+- **Typography**: Apply Google Font CSS variables (`font-sans`, `font-serif`, `font-mono`) defined in [Fonts.ts](file:///home/whyal/Projects/smart-travel-itinerary-planner/frontend/app/lib/Fonts.ts).
 - **Icons**: Use icons imported from `lucide-react`.
 
 ---

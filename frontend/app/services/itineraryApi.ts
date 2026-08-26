@@ -10,10 +10,11 @@ export interface SaveItineraryPayload {
   createdAt: string;
 }
 
-export async function saveItineraryToDatabase(payload: SaveItineraryPayload): Promise<void> {
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+export const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
-  const response = await fetch(`${apiBase}/itineraries`, {
+export async function saveItineraryToDatabase(payload: SaveItineraryPayload): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/itineraries`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

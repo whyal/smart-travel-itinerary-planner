@@ -5,6 +5,7 @@ import * as itineraryApi from "../../services/itineraryApi";
 
 // Mock API service module
 jest.mock("../../services/itineraryApi", () => ({
+  ...jest.requireActual("../../services/itineraryApi"),
   saveItineraryToDatabase: jest.fn(),
 }));
 

@@ -1,6 +1,5 @@
-"use client";
-
 import { AlertCircle } from "lucide-react";
+import { API_BASE_URL } from "../../services/itineraryApi";
 
 interface ErrorBannerProps {
   error: string | null;
@@ -16,7 +15,7 @@ export default function ErrorBanner({ error }: ErrorBannerProps) {
         <p className="font-semibold">Stream Request Failed</p>
         <p className="mt-0.5 text-red-700">{error}</p>
         <p className="mt-2 text-xs text-red-600">
-          Ensure your backend service is running locally on <code className="bg-red-100 px-1 rounded">http://localhost:8080</code>.
+          Ensure your backend service is running on <code className="bg-red-100 px-1 rounded">{API_BASE_URL}</code>.
         </p>
       </div>
     </div>
