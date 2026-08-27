@@ -179,6 +179,18 @@ class KnowledgeControllerTest {
     }
 
     @Test
+    void testPreloadEndpointWhenNoFilesFound() throws Exception {
+        when(ingestionService.ingestPreloadedKnowledge(eq("Kyoto"), any())).thenReturn(0);
+
+        mockMvc.perform(post("/api/knowledge/preload")
+                        .param("destination", "Kyoto"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("not_found")))
+                .andExpect(jsonPath("$.destination", is("Kyoto")))
+                .andExpect(jsonPath("$.documentsIngested", is(0)));
+    }
+
+    @Test
     void testStatusEndpoint() throws Exception {
         when(ingestionService.getIngestedDocumentCount()).thenReturn(15);
         when(ingestionService.getIngestedDestinations()).thenReturn(Set.of("Kyoto", "Paris"));

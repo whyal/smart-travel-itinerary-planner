@@ -119,6 +119,12 @@ public class KnowledgeController {
             @RequestParam(required = false) String resourcePath) {
 
         int count = ingestionService.ingestPreloadedKnowledge(destination, resourcePath);
+        if (count == 0) {
+            return ResponseEntity.ok(new IngestionResponse(
+                    "not_found", "No preloaded knowledge files found for destination [" + destination + "]. The assistant will rely on model knowledge or user-ingested documents.",
+                    destination, 0
+            ));
+        }
         return ResponseEntity.ok(new IngestionResponse(
                 "success", "Successfully preloaded and ingested " + count + " documents for destination [" + destination + "].",
                 destination, count

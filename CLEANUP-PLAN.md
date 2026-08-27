@@ -166,8 +166,8 @@ Broken Documentation Links │ AGENTS.md:20-98 │ Stale Links │ Contains hard
 ### Priority 1: High (Clean up Bloat & Prevent Bugs)
 
 [x] Standardize API URLs: Use process.env.NEXT_PUBLIC_API_URL consistently for all frontend fetch requests, including SSE streaming in ItineraryForm.tsx.
-[ ] Remove Duplicate "Save to DB" UI: Keep the save action exclusively in the top toolbar of ItineraryOutputView.tsx and remove the redundant button inside StructuredItineraryView.tsx.
-[ ] Remove Dead Code & Boilerplate: Delete HomeController.java, remove the redundant objectMapper() bean in AiConfig.java, and either provide sample knowledge files in backend/src/main/resources/data/ or handle missing preloaded files gracefully.
+[x] Remove Duplicate "Save to DB" UI: Keep the save action exclusively in the top toolbar of ItineraryOutputView.tsx and remove the redundant button inside StructuredItineraryView.tsx.
+[x] Remove Dead Code & Boilerplate: Delete HomeController.java, add @ConditionalOnMissingBean to objectMapper() in AiConfig.java, remove empty data/ directory, and handle missing preloaded files gracefully.
 
 ### Priority 2: Medium (Refactor Architecture & Patterns)
 
