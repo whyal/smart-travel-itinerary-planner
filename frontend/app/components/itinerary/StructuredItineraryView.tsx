@@ -2,8 +2,6 @@
 
 import {
   CheckCircle2,
-  Loader2,
-  Database,
   AlertCircle,
   X,
   Layers,
@@ -18,7 +16,6 @@ interface StructuredItineraryViewProps {
   saveToDbMessage: string | null;
   selectedDayFilter: number | "all";
   onSelectDayFilter: (day: number | "all") => void;
-  onSaveToDatabase: () => void;
   onDismissSaveMessage: () => void;
 }
 
@@ -29,7 +26,6 @@ export default function StructuredItineraryView({
   saveToDbMessage,
   selectedDayFilter,
   onSelectDayFilter,
-  onSaveToDatabase,
   onDismissSaveMessage,
 }: StructuredItineraryViewProps) {
   const filteredDays = itinerary.days.filter(
@@ -52,37 +48,6 @@ export default function StructuredItineraryView({
             <h3 className="text-2xl font-extrabold text-slate-900 mt-1">
               {itinerary.destination} Travel Plan
             </h3>
-          </div>
-
-          {/* Main Save to Database Action Button */}
-          <div>
-            {saveToDbStatus === "saved" ? (
-              <div className="flex items-center space-x-2 px-4 py-2 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-bold shadow-2xs">
-                <CheckCircle2 className="w-4.5 h-4.5 text-emerald-600 shrink-0" />
-                <span>Saved to Database</span>
-              </div>
-            ) : saveToDbStatus === "saving" ? (
-              <button
-                disabled
-                className="flex items-center space-x-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold opacity-80 cursor-not-allowed shadow-md"
-              >
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Saving to DB...</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={onSaveToDatabase}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 ${
-                  saveToDbStatus === "error"
-                    ? "bg-amber-600 hover:bg-amber-700 text-white ring-2 ring-amber-500/20"
-                    : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/20"
-                }`}
-              >
-                <Database className="w-4 h-4" />
-                <span>{saveToDbStatus === "error" ? "Retry Save to DB" : "Save to Database"}</span>
-              </button>
-            )}
           </div>
         </div>
 
