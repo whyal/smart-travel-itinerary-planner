@@ -2,10 +2,8 @@
 
 import { ChangeEvent, FormEvent } from "react";
 import { Sparkles, RefreshCw, Square, Database } from "lucide-react";
-import ItineraryHistory, {
-  SavedItineraryItem,
-} from "../ItineraryHistory";
-import { ItineraryFormData } from "../../types/itinerary";
+import ItineraryHistory from "../ItineraryHistory";
+import { ItineraryFormData, SavedItineraryItem } from "../../types/itinerary";
 
 interface ItineraryFormFieldsProps {
   formData: ItineraryFormData;

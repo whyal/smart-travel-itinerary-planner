@@ -8,13 +8,16 @@ import {
   SaveToDbStatus,
 } from "../types/itinerary";
 import { parseItineraryFromText } from "../utils/itineraryParser";
-import { API_BASE_URL, saveItineraryToDatabase } from "../services/itineraryApi";
+import {
+  saveItineraryToDatabase,
+  streamItinerary,
+} from "../services/itineraryApi";
 import {
   getHistoryList,
   saveToHistory,
   deleteFromHistory,
   updateHistoryItemSavedToDb,
-} from "./ItineraryHistory";
+} from "../utils/historyStorage";
 import ItineraryFormFields from "./itinerary/ItineraryFormFields";
 import ErrorBanner from "./itinerary/ErrorBanner";
 import ItineraryOutputView from "./itinerary/ItineraryOutputView";
@@ -265,87 +268,29 @@ Generate a ${formData.days}-day itinerary matching these constraints.`;
     abortControllerRef.current = controller;
 
     const currentSessionId = conversationId || crypto.randomUUID();
-    const payload = {
-      prompt: formatToKeyValuePrompt(),
-      conversationId: currentSessionId,
-    };
 
     let accumulatedText = "";
     let finalParsedItinerary: ItineraryResponse | null = null;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/itinerary/stream`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "text/event-stream, application/json, text/plain",
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
+      await streamItinerary(
+        { prompt: formatToKeyValuePrompt(), conversationId: currentSessionId },
+        controller.signal,
+        (chunk) => {
+          accumulatedText += chunk;
+          setStreamedText(accumulatedText);
 
-      if (!response.ok) {
-        throw new Error(
-          `Server returned HTTP ${response.status}: ${response.statusText}`,
-        );
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error("Response body is not a readable stream.");
-      }
-
-      const decoder = new TextDecoder("utf-8");
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const rawChunk = decoder.decode(value, { stream: true });
-
-        // Process SSE payload format if formatted with "data: ..." lines
-        let textChunk = "";
-        if (rawChunk.includes("data:")) {
-          const lines = rawChunk.split("\n");
-          for (const line of lines) {
-            if (line.startsWith("data:")) {
-              const content = line.slice(5).trimStart();
-              if (content !== "[DONE]") {
-                textChunk += content + "\n";
-              }
-            } else if (
-              line.trim() &&
-              !line.startsWith("event:") &&
-              !line.startsWith("id:") &&
-              !line.startsWith("retry:")
-            ) {
-              textChunk += line + "\n";
-            }
+          // Attempt soft itinerary parse while streaming
+          const streamedParsed = parseItineraryFromText(
+            accumulatedText,
+            formData.destination,
+          );
+          if (streamedParsed) {
+            setItinerary(streamedParsed);
+            finalParsedItinerary = streamedParsed;
           }
-        } else {
-          textChunk = rawChunk;
-        }
-
-        accumulatedText += textChunk;
-        setStreamedText(accumulatedText);
-
-        // Attempt soft itinerary parse while streaming
-        const streamedParsed = parseItineraryFromText(
-          accumulatedText,
-          formData.destination,
-        );
-        if (streamedParsed) {
-          setItinerary(streamedParsed);
-          finalParsedItinerary = streamedParsed;
-        }
-      }
-
-      // Flush decoder buffer
-      const finalChunk = decoder.decode();
-      if (finalChunk) {
-        accumulatedText += finalChunk;
-        setStreamedText(accumulatedText);
-      }
+        },
+      );
 
       // Final attempt to parse complete itinerary
       const finalParsed = parseItineraryFromText(
