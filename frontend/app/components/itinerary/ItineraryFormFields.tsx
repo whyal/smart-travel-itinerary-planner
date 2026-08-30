@@ -72,7 +72,7 @@ export default function ItineraryFormFields({
 
       <form onSubmit={onSubmit} className="space-y-5">
         <div>
-          <label htmlFor="destination" className="block text-sm font-semibold text-slate-750 mb-1.5">
+          <label htmlFor="destination" className="block text-sm font-semibold text-slate-700 mb-1.5">
             Destination
           </label>
           <input
@@ -89,7 +89,7 @@ export default function ItineraryFormFields({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="days" className="block text-sm font-semibold text-slate-750 mb-1.5">
+            <label htmlFor="days" className="block text-sm font-semibold text-slate-700 mb-1.5">
               Days (1-7)
             </label>
             <input
@@ -105,7 +105,7 @@ export default function ItineraryFormFields({
           </div>
 
           <div>
-            <label htmlFor="pace" className="block text-sm font-semibold text-slate-750 mb-1.5">
+            <label htmlFor="pace" className="block text-sm font-semibold text-slate-700 mb-1.5">
               Pace
             </label>
             <select
@@ -123,7 +123,7 @@ export default function ItineraryFormFields({
         </div>
 
         <div>
-          <label htmlFor="interests" className="block text-sm font-semibold text-slate-750 mb-1.5">
+          <label htmlFor="interests" className="block text-sm font-semibold text-slate-700 mb-1.5">
             Interests
           </label>
           <input
@@ -138,7 +138,7 @@ export default function ItineraryFormFields({
         </div>
 
         <div>
-          <label htmlFor="budget" className="block text-sm font-semibold text-slate-750 mb-1.5">
+          <label htmlFor="budget" className="block text-sm font-semibold text-slate-700 mb-1.5">
             Budget
           </label>
           <select

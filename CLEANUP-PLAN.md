@@ -179,5 +179,5 @@ Broken Documentation Links │ AGENTS.md:20-98 │ Stale Links │ Contains hard
 ### Priority 3: Low (Hygiene & Documentation)
 
 [x] Fix broken documentation links in AGENTS.md.
-[ ] Clean up non-standard CSS classes (text-slate-750, animate-fade-in).
+[x] Clean up non-standard CSS classes (text-slate-750, animate-fade-in).
 [ ] Expand parser unit tests in itineraryParser.test.ts for markdown and edge-case payload validation.
