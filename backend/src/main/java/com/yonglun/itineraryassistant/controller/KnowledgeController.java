@@ -5,17 +5,15 @@ import com.yonglun.itineraryassistant.dto.*;
 import com.yonglun.itineraryassistant.service.IngestionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
 @RestController
-@RequestMapping({"/api/knowledge", "/api/rag"})
+@RequestMapping("/api/knowledge")
 public class KnowledgeController {
 
     private static final Logger log = LoggerFactory.getLogger(KnowledgeController.class);
@@ -30,6 +28,10 @@ public class KnowledgeController {
         this.embeddingProperties = embeddingProperties;
     }
 
+    /**
+     * Ingest a flat list of structured travel documents.
+     * For batched ingestion with an explicit destination wrapper, use {@link #ingestBatch(DocumentBatchIngestionRequest)}.
+     */
     @PostMapping(value = "/documents", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<IngestionResponse> ingestDocuments(
             @RequestBody List<TravelDocumentDto> documents,
@@ -53,6 +55,13 @@ public class KnowledgeController {
         ));
     }
 
+    /**
+     * Ingest a batch of structured travel documents with an explicit destination wrapper.
+     * Prefer {@link #ingestDocuments(List, String)} with a {@code ?destination} query param for new integrations.
+     *
+     * @deprecated Use POST /api/knowledge/documents?destination=... instead.
+     */
+    @Deprecated
     @PostMapping(value = "/batch", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<IngestionResponse> ingestBatch(@RequestBody DocumentBatchIngestionRequest request) {
         if (request == null || request.documents() == null || request.documents().isEmpty()) {
@@ -68,7 +77,11 @@ public class KnowledgeController {
         ));
     }
 
-    @PostMapping(value = {"/articles", "/custom", "/ingest"}, consumes = MediaType.APPLICATION_JSON_VALUE)
+    /**
+     * Ingest raw article text for a destination.
+     * The canonical path is POST /api/knowledge/articles; /custom and /ingest are deprecated aliases.
+     */
+    @PostMapping(value = "/articles", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<IngestionResponse> ingestArticles(@RequestBody CustomIngestionRequest request) {
         if (request == null || request.articles() == null || request.articles().isEmpty()) {
             return ResponseEntity.badRequest().body(new IngestionResponse(
@@ -86,7 +99,7 @@ public class KnowledgeController {
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<IngestionResponse> uploadDocumentFile(
             @RequestParam("file") MultipartFile file,
-            @RequestParam(value = "destination", required = false) String destination) {
+            @RequestParam(value = "destination", required = false) String destination) throws Exception {
 
         if (file == null || file.isEmpty()) {
             return ResponseEntity.badRequest().body(new IngestionResponse(
@@ -105,11 +118,6 @@ public class KnowledgeController {
             return ResponseEntity.badRequest().body(new IngestionResponse(
                     "error", "Invalid file format: " + e.getMessage(), destination, 0
             ));
-        } catch (Exception e) {
-            log.error("Failed to process file upload for ingestion", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new IngestionResponse(
-                    "error", "Failed to process file: " + e.getMessage(), destination, 0
-            ));
         }
     }
 
@@ -119,6 +127,12 @@ public class KnowledgeController {
             @RequestParam(required = false) String resourcePath) {
 
         int count = ingestionService.ingestPreloadedKnowledge(destination, resourcePath);
+        if (count == 0) {
+            return ResponseEntity.ok(new IngestionResponse(
+                    "not_found", "No preloaded knowledge files found for destination [" + destination + "]. The assistant will rely on model knowledge or user-ingested documents.",
+                    destination, 0
+            ));
+        }
         return ResponseEntity.ok(new IngestionResponse(
                 "success", "Successfully preloaded and ingested " + count + " documents for destination [" + destination + "].",
                 destination, count
@@ -149,13 +163,5 @@ public class KnowledgeController {
                 .toList();
 
         return ResponseEntity.ok(responses);
-    }
-
-    @ExceptionHandler(MaxUploadSizeExceededException.class)
-    public ResponseEntity<IngestionResponse> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException e) {
-        log.warn("Uploaded file exceeds maximum allowed size: {}", e.getMessage());
-        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(new IngestionResponse(
-                "error", "Uploaded file exceeds the maximum allowed file size limit (50MB).", null, 0
-        ));
     }
 }

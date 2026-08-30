@@ -17,9 +17,9 @@ This repository contains the frontend client for the **AI Travel Itinerary Gener
 ### Key Architecture & Features
 - **Backend Integration**: Communicates with a Spring Boot / Spring AI backend service:
   - **SSE Streaming (`text/event-stream`)**: Consumes live streaming itinerary responses to render plans dynamically as the AI generates them.
-  - **REST Persistence API**: Posts saved itineraries (`POST /api/itineraries`) via `saveItineraryToDatabase` in [itineraryApi.ts](file:///home/whyal/Projects/itinerary-planner-fe/app/services/itineraryApi.ts).
+  - **REST Persistence API**: Posts saved itineraries (`POST /api/itineraries`) via `saveItineraryToDatabase` in [itineraryApi.ts](app/services/itineraryApi.ts).
 - **Session Isolation**: Manages a unique `conversationId` UUID per user session stored in `localStorage` to isolate multi-turn memory in backend Spring AI chat memory advisors.
-- **Parsing & Real-Time Rendering**: Formats raw stream chunks via [itineraryParser.ts](file:///home/whyal/Projects/itinerary-planner-fe/app/utils/itineraryParser.ts) into structured [ItineraryResponse](file:///home/whyal/Projects/itinerary-planner-fe/app/types/itinerary.ts) types, allowing toggleable switching between **Structured View** and **Raw Stream View**.
+- **Parsing & Real-Time Rendering**: Formats raw stream chunks via [itineraryParser.ts](app/utils/itineraryParser.ts) into structured [ItineraryResponse](app/types/itinerary.ts) types, allowing toggleable switching between **Structured View** and **Raw Stream View**.
 - **Local History & Persistence**: Supports client-side history via `localStorage` as well as optional automated/manual backend DB persistence.
 
 ---
@@ -43,13 +43,16 @@ This repository contains the frontend client for the **AI Travel Itinerary Gener
 │   │   └── __tests__/
 │   │       └── ItineraryForm.test.tsx # React Testing Library component integration tests
 │   ├── lib/
-│   │   └── Fonts.ts                   # Google Fonts configuration (Fraunces, Inter, IBM Plex Mono)
+│   │   └── fonts.ts                   # Google Fonts configuration (Fraunces, Inter, IBM Plex Mono)
 │   ├── services/
 │   │   └── itineraryApi.ts            # Fetch wrapper for backend REST API requests
 │   ├── types/
 │   │   └── itinerary.ts               # Core TypeScript interfaces matching backend models
 │   ├── utils/
-│   │   └── itineraryParser.ts         # Stream text parser for structured itinerary extraction
+│   │   ├── historyStorage.ts          # LocalStorage persistence utilities for saved history
+│   │   ├── itineraryParser.ts         # Stream text parser for structured itinerary extraction
+│   │   └── __tests__/
+│   │       └── itineraryParser.test.ts # Parser unit tests
 │   ├── globals.css                    # Tailwind CSS directives & global styling rules
 │   ├── layout.tsx                     # Root App Router layout with fonts & metadata
 │   └── page.tsx                       # App homepage (Server Component)
@@ -82,7 +85,7 @@ Before completing any coding task:
 ## 4. Coding Conventions & Guidelines
 
 ### TypeScript & Types
-- **Strict Typing**: Maintain strict TypeScript checking (`"strict": true` in `tsconfig.json`). Avoid using `any`; define explicit interfaces in [itinerary.ts](file:///home/whyal/Projects/itinerary-planner-fe/app/types/itinerary.ts).
+- **Strict Typing**: Maintain strict TypeScript checking (`"strict": true` in `tsconfig.json`). Avoid using `any`; define explicit interfaces in [itinerary.ts](app/types/itinerary.ts).
 - **Backend Model Alignment**: Keep TypeScript types in sync 1:1 with backend Spring Boot records (`ItineraryResponse`, `DayPlan`, `Activity`, `ItineraryFormData`).
 - **Path Aliases**: Use `@/*` for imports mapping to the project root (e.g., `@/app/types/itinerary`).
 
@@ -95,7 +98,7 @@ Before completing any coding task:
 
 ### UI & Styling Standards
 - **Tailwind CSS v4**: Use utility-first styling with Tailwind CSS. Follow established color palettes (`slate-50`, `slate-900`, `teal-600`, etc.).
-- **Typography**: Apply Google Font CSS variables (`font-sans`, `font-serif`, `font-mono`) defined in [Fonts.ts](file:///home/whyal/Projects/itinerary-planner-fe/app/lib/Fonts.ts).
+- **Typography**: Apply Google Font CSS variables (`font-display`, `font-body`, `font-mono`) defined in [fonts.ts](app/lib/fonts.ts) and configured via `@theme` in [globals.css](app/globals.css).
 - **Icons**: Use icons imported from `lucide-react`.
 
 ---

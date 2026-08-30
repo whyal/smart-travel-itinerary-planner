@@ -161,7 +161,6 @@ export default function ItineraryOutputView({
               saveToDbMessage={saveToDbMessage}
               selectedDayFilter={selectedDayFilter}
               onSelectDayFilter={onSelectDayFilter}
-              onSaveToDatabase={onSaveToDatabase}
               onDismissSaveMessage={onDismissSaveMessage}
             />
           ) : loading ? (
