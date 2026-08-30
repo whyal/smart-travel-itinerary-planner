@@ -326,7 +326,7 @@ export function parseMarkdownItinerary(
         if (currentActivity) currentDay.activities.push(currentActivity);
         const timeStr = timeMatch[1];
         const rest = timeMatch[2].replace(/^\*+|\*+$/g, "").trim();
-        const parts = rest.split(/[-–—@at:]/);
+        const parts = rest.split(/\s*[-–—:]\s*|\s+@\s+|\s+at\s+/i);
         const loc = parts.length > 1 ? parts[0].trim() : defaultDestination;
         const desc = rest;
         currentActivity = {

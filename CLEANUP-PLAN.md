@@ -180,4 +180,4 @@ Broken Documentation Links │ AGENTS.md:20-98 │ Stale Links │ Contains hard
 
 [x] Fix broken documentation links in AGENTS.md.
 [x] Clean up non-standard CSS classes (text-slate-750, animate-fade-in).
-[ ] Expand parser unit tests in itineraryParser.test.ts for markdown and edge-case payload validation.
+[x] Expand parser unit tests in itineraryParser.test.ts for markdown and edge-case payload validation.
