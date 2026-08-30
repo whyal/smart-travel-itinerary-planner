@@ -33,7 +33,7 @@ export default function StructuredItineraryView({
   );
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-in fade-in">
       {/* Summary & Day Filter Header Card */}
       <div className="border-b border-slate-100 pb-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -45,7 +45,7 @@ export default function StructuredItineraryView({
               <span className="text-slate-300">•</span>
               <span className="text-xs font-medium text-slate-500">{formData.pace} Pace</span>
             </div>
-            <h3 className="text-2xl font-extrabold text-slate-900 mt-1">
+            <h3 className="text-2xl font-extrabold text-slate-900 mt-1 font-display">
               {itinerary.destination} Travel Plan
             </h3>
           </div>

@@ -1,1 +1,17 @@
 @import "tailwindcss";
+
+/*
+  @theme wires the CSS variables injected by next/font on <html>
+  into Tailwind's font-* utility scale, making font-display,
+  font-body, and font-mono available as Tailwind classes.
+
+  Variable names deliberately differ from --font-display / --font-body
+  / --font-mono to avoid a specificity collision where :root's @theme
+  would override the className-scoped variables next/font injects.
+  See app/lib/fonts.ts for details.
+*/
+@theme {
+  --font-display: var(--font-fraunces);
+  --font-body: var(--font-inter);
+  --font-mono: var(--font-plex-mono);
+}

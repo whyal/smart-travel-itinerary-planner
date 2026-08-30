@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { fraunces, inter, plexMono } from "./lib/Fonts";
+import { fraunces, inter, plexMono } from "./lib/fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
