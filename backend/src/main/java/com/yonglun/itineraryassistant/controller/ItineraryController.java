@@ -8,8 +8,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
+/**
+ * REST controller for itinerary generation and streaming.
+ *
+ * <p>The canonical base path is {@code /api/itineraries}.
+ * The legacy path {@code /api/itinerary} (singular) is retained as a deprecated alias for
+ * backwards compatibility and should be removed in a future release.
+ */
 @RestController
-@RequestMapping("/api/itinerary")
+@RequestMapping({"/api/itineraries", "/api/itinerary"})
 public class ItineraryController {
     private final ItineraryService itineraryService;
 
