@@ -174,7 +174,7 @@ Broken Documentation Links │ AGENTS.md:20-98 │ Stale Links │ Contains hard
 [x] Extract Streaming & Storage Logic: Create a dedicated hook/service for SSE streaming (useItineraryStream or itineraryApi.streamItinerary) and separate localStorage storage functions from ItineraryHistory.tsx into a utility module.
 [x] Consolidate Backend Endpoints: Unify redundant ingestion endpoints in KnowledgeController.java (deprecate duplicate aliases) and standardize route plurals (/api/itineraries).
 [x] Fix Font Configuration: Add Tailwind v4 @theme font definitions in globals.css or rename Fonts.ts to fonts.ts and apply the intended typography.
-[ ] Add Global Backend Exception Handling: Introduce @RestControllerAdvice to standardize API error responses across all controllers.
+[x] Add Global Backend Exception Handling: Introduce @RestControllerAdvice to standardize API error responses across all controllers.
 
 ### Priority 3: Low (Hygiene & Documentation)
 

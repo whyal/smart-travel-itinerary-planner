@@ -5,11 +5,9 @@ import com.yonglun.itineraryassistant.dto.*;
 import com.yonglun.itineraryassistant.service.IngestionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -101,7 +99,7 @@ public class KnowledgeController {
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<IngestionResponse> uploadDocumentFile(
             @RequestParam("file") MultipartFile file,
-            @RequestParam(value = "destination", required = false) String destination) {
+            @RequestParam(value = "destination", required = false) String destination) throws Exception {
 
         if (file == null || file.isEmpty()) {
             return ResponseEntity.badRequest().body(new IngestionResponse(
@@ -119,11 +117,6 @@ public class KnowledgeController {
             log.warn("Invalid file content uploaded: {}", e.getMessage());
             return ResponseEntity.badRequest().body(new IngestionResponse(
                     "error", "Invalid file format: " + e.getMessage(), destination, 0
-            ));
-        } catch (Exception e) {
-            log.error("Failed to process file upload for ingestion", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new IngestionResponse(
-                    "error", "Failed to process file: " + e.getMessage(), destination, 0
             ));
         }
     }
@@ -170,13 +163,5 @@ public class KnowledgeController {
                 .toList();
 
         return ResponseEntity.ok(responses);
-    }
-
-    @ExceptionHandler(MaxUploadSizeExceededException.class)
-    public ResponseEntity<IngestionResponse> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException e) {
-        log.warn("Uploaded file exceeds maximum allowed size: {}", e.getMessage());
-        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(new IngestionResponse(
-                "error", "Uploaded file exceeds the maximum allowed file size limit (50MB).", null, 0
-        ));
     }
 }
