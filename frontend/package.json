@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "jest"
+    "test": "jest",
+    "prepare": "husky"
   },
   "dependencies": {
     "lucide-react": "^1.25.0",
@@ -27,9 +28,12 @@
     "@vitejs/plugin-react": "^6.0.4",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
+    "husky": "^9.1.7",
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1",
     "jsdom": "^30.0.1",
+    "lint-staged": "^17.4.1",
+    "prettier": "^3.9.6",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.12",
     "typescript": "^5",
