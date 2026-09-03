@@ -1,4 +1,5 @@
 <!-- BEGIN:nextjs-agent-rules -->
+
 # This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
@@ -15,6 +16,7 @@ Welcome! This document serves as the guide for AI agents and developers working 
 This repository contains the frontend client for the **AI Travel Itinerary Generator**, built with **Next.js 16 (App Router)**, **React 19**, **TypeScript**, and **Tailwind CSS v4**.
 
 ### Key Architecture & Features
+
 - **Backend Integration**: Communicates with a Spring Boot / Spring AI backend service:
   - **SSE Streaming (`text/event-stream`)**: Consumes live streaming itinerary responses to render plans dynamically as the AI generates them.
   - **REST Persistence API**: Posts saved itineraries (`POST /api/itineraries`) via `saveItineraryToDatabase` in [itineraryApi.ts](app/services/itineraryApi.ts).
@@ -28,6 +30,7 @@ This repository contains the frontend client for the **AI Travel Itinerary Gener
 
 ```
 .
+├── .husky/                            # Git pre-commit hooks (Husky & lint-staged)
 ├── app/
 │   ├── components/
 │   │   ├── ItineraryForm.tsx          # Main client component handling form state & SSE streaming
@@ -69,27 +72,37 @@ This repository contains the frontend client for the **AI Travel Itinerary Gener
 ## 3. Development & Verification Workflows
 
 ### Command Suite
+
 - **Development Server**: `npm run dev`
 - **Build & Compile**: `npm run build`
-- **Run Unit/Integration Tests**: `npm test` (or `npx jest`)
-- **Linting**: `npm run lint`
+- **Unit & Integration Testing (Jest)**: `npm test` (or `npx jest`)
+- **Unit Testing (Vitest)**: `npx vitest run` (or `npx vitest`)
+- **Code Linting (ESLint)**: `npm run lint` (or `npx eslint`)
+- **Code Formatting (Prettier)**: `npx prettier --check .` (to check) or `npx prettier --write .` (to format)
+- **Pre-Commit Verification & Hooks**: `npx lint-staged` / `npm run prepare` (Husky)
 
 ### Mandatory Verification Checklist
+
 Before completing any coding task:
-1. **Run Unit Tests**: Execute `npm test` and verify that all test suites pass.
+
+1. **Run Unit & Integration Tests**: Execute `npm test` (and/or `npx vitest run`) and verify all test suites pass.
 2. **Build Verification**: Run `npm run build` to ensure there are no TypeScript errors or Next.js build issues.
-3. **Lint Check**: Run `npm run lint` and resolve any flagged code issues or warnings.
+3. **Lint Check**: Run `npm run lint` and resolve any flagged ESLint issues or warnings.
+4. **Code Formatting**: Ensure all files conform to formatting standards via `npx prettier --check .` (or run `npx prettier --write .`).
+5. **Pre-commit Hook Sanity**: Ensure staged changes satisfy `npx lint-staged` without breaking Git hook validations.
 
 ---
 
 ## 4. Coding Conventions & Guidelines
 
 ### TypeScript & Types
+
 - **Strict Typing**: Maintain strict TypeScript checking (`"strict": true` in `tsconfig.json`). Avoid using `any`; define explicit interfaces in [itinerary.ts](app/types/itinerary.ts).
 - **Backend Model Alignment**: Keep TypeScript types in sync 1:1 with backend Spring Boot records (`ItineraryResponse`, `DayPlan`, `Activity`, `ItineraryFormData`).
 - **Path Aliases**: Use `@/*` for imports mapping to the project root (e.g., `@/app/types/itinerary`).
 
 ### React & Next.js Standards
+
 - **Component Classification**:
   - Keep route files (`app/page.tsx`, `app/layout.tsx`) as **Server Components** for SEO metadata rendering.
   - Mark interactive UI components with `"use client"` directive.
@@ -97,6 +110,7 @@ Before completing any coding task:
 - **Stream & Memory Management**: Always attach cleanup logic (e.g., calling `abortController.abort()`) when canceling SSE streams or unmounting stream components.
 
 ### UI & Styling Standards
+
 - **Tailwind CSS v4**: Use utility-first styling with Tailwind CSS. Follow established color palettes (`slate-50`, `slate-900`, `teal-600`, etc.).
 - **Typography**: Apply Google Font CSS variables (`font-display`, `font-body`, `font-mono`) defined in [fonts.ts](app/lib/fonts.ts) and configured via `@theme` in [globals.css](app/globals.css).
 - **Icons**: Use icons imported from `lucide-react`.
