@@ -31,8 +31,10 @@ public class ItineraryService {
 
     public Flux<String> streamItinerary(String prompt, String conversationId) {
         return chatClient.prompt()
-                // Add a strict system rule to prevent markdown fences and filler during SSE streaming
-                .system("You are a data API. Output ONLY raw, RFC8259-compliant JSON. Never use markdown code blocks (```json), greetings, or introductory text.")
+                // Add a strict system rule to prevent markdown fences and reinforce anti-duplication during SSE streaming
+                .system("You are a data API. Output ONLY raw, RFC8259-compliant JSON without markdown code blocks (```json) or introductory text. " +
+                        "Ensure every visited location/attraction is unique across the entire multi-day itinerary (zero duplicate venues across days), " +
+                        "cluster activities by district each day, and limit activities to 2 to 4 per day.")
                 .user(userSpec -> userSpec
                         .text(prompt + "\n\n{format}")
                         .param("format", outputConverter.getFormat())
