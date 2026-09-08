@@ -73,9 +73,10 @@ public class IngestionService {
         String dest = hasText(destination) ? destination.trim() : "General";
         List<Document> docs = rawArticles.stream()
                 .filter(this::hasText)
+                .map(String::trim)
                 .map(content -> new Document(
-                        UUID.randomUUID().toString(),
-                        content.trim(),
+                        generateDeterministicId(dest, "article", content),
+                        content,
                         Map.of("destination", dest, "type", "travel_guide")
                 ))
                 .toList();
@@ -104,8 +105,10 @@ public class IngestionService {
                         meta.put("destination", dest);
                         meta.put("type", "travel_guide");
                         meta.put("source_filename", file.getOriginalFilename());
-                        String content = "Destination: " + dest + "\nSource: " + file.getOriginalFilename() + "\n\n" + doc.getText().trim();
-                        return new Document(UUID.randomUUID().toString(), content, meta);
+                        String trimmedText = doc.getText().trim();
+                        String content = "Destination: " + dest + "\nSource: " + file.getOriginalFilename() + "\n\n" + trimmedText;
+                        String docId = generateDeterministicId(dest, file.getOriginalFilename(), trimmedText);
+                        return new Document(docId, content, meta);
                     })
                     .toList();
 
@@ -204,7 +207,11 @@ public class IngestionService {
     }
 
     private Document toDocument(TravelDocumentDto item, String destination) {
-        String docId = hasText(item.id()) ? item.id().trim() : UUID.randomUUID().toString();
+        String content = (item.content() != null) ? item.content().trim() : "";
+        String title = (item.title() != null) ? item.title().trim() : "";
+        String docId = hasText(item.id())
+                ? item.id().trim()
+                : generateDeterministicId(destination, title, content);
 
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("destination", destination);
@@ -231,8 +238,8 @@ public class IngestionService {
         appendField(sb, "Best Time to Visit: ", item.bestTimeToVisit());
         appendField(sb, "Suggested Duration: ", item.suggestedDuration());
 
-        if (hasText(item.content())) {
-            sb.append("\n").append(item.content().trim());
+        if (hasText(content)) {
+            sb.append("\n").append(content);
         }
 
         return new Document(docId, sb.toString().trim(), metadata);
@@ -240,11 +247,39 @@ public class IngestionService {
 
     private int recordAndStore(List<Document> docs, Map<String, Integer> counts) {
         if (docs.isEmpty()) return 0;
-        vectorStore.add(docs);
-        ingestedDocumentCount.addAndGet(docs.size());
-        counts.forEach((dest, count) -> destinationDocumentCounts.merge(dest, count, Integer::sum));
-        log.info("Successfully ingested {} documents into VectorStore for destinations: {}", docs.size(), counts.keySet());
-        return docs.size();
+
+        // In-memory batch deduplication by Document ID to prevent duplicate vector rows
+        Map<String, Document> uniqueDocsMap = new LinkedHashMap<>();
+        for (Document doc : docs) {
+            if (doc != null && hasText(doc.getId())) {
+                uniqueDocsMap.put(doc.getId(), doc);
+            }
+        }
+
+        if (uniqueDocsMap.isEmpty()) return 0;
+        List<Document> uniqueDocs = new ArrayList<>(uniqueDocsMap.values());
+
+        vectorStore.add(uniqueDocs);
+        ingestedDocumentCount.addAndGet(uniqueDocs.size());
+
+        // Recompute destination counts accurately based on unique deduplicated items
+        Map<String, Integer> uniqueCounts = new HashMap<>();
+        for (Document doc : uniqueDocs) {
+            Object destMeta = doc.getMetadata().get("destination");
+            String dest = (destMeta instanceof String s && hasText(s)) ? s.trim() : "General";
+            uniqueCounts.merge(dest, 1, Integer::sum);
+        }
+        uniqueCounts.forEach((dest, count) -> destinationDocumentCounts.merge(dest, count, Integer::sum));
+
+        log.info("Successfully ingested {} unique documents into VectorStore for destinations: {}", uniqueDocs.size(), uniqueCounts.keySet());
+        return uniqueDocs.size();
+    }
+
+    private String generateDeterministicId(String destination, String prefixOrTitle, String content) {
+        String rawKey = (destination != null ? destination.trim().toLowerCase() : "") + "::"
+                + (prefixOrTitle != null ? prefixOrTitle.trim().toLowerCase() : "") + "::"
+                + (content != null ? content.trim().toLowerCase() : "");
+        return UUID.nameUUIDFromBytes(rawKey.getBytes(StandardCharsets.UTF_8)).toString();
     }
 
     private boolean hasText(String str) {
