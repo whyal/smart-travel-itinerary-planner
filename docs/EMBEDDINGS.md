@@ -77,9 +77,27 @@ flowchart TB
 
 ---
 
-## 3. Switching Models: Ready-to-Use Recipes
+## 3. Step-by-Step Model Switching Workflow
 
-No Java code changes or recompilations are needed to switch models. Simply set the environment variables or update `application.yaml`.
+Switching embedding models requires **zero code changes or recompilation**. Follow this 5-step checklist:
+
+1. **Step 1: Ensure Target Embedding Service is Running**
+   - *Ollama*: `ollama pull qwen3-embedding:0.6b` and ensure Ollama daemon is running.
+   - *HuggingFace TEI / vLLM*: Start the inference container on port `8000`.
+   - *Google Gemini*: Ensure `GEMINI_API_KEY` is exported.
+2. **Step 2: Set Environment Variables**
+   - Export `EMBEDDING_PROVIDER`, `EMBEDDING_MODEL`, `EMBEDDING_DIMENSIONS`, and the corresponding base URL or API key (see recipes below).
+3. **Step 3: Restart the Backend Application**
+   - Start or restart the Spring Boot backend (`./gradlew bootRun`).
+   - The backend automatically selects the target table (`vector_store_{provider}_{dimensions}`) and sets the proper index (HNSW for $\le 2000$ dims).
+4. **Step 4: Ingest Knowledge Documents for the New Vector Space**
+   - Because embeddings from different models inhabit distinct vector spaces, upload/preload documents into the newly selected table (`POST /api/knowledge/documents`, `/upload`, or `/preload`).
+5. **Step 5: Verify Active Status**
+   - Check `GET /api/knowledge/status` to confirm the active provider, model, dimensions, and table name.
+
+---
+
+## 4. Switching Models: Ready-to-Use Recipes
 
 ### Recipe 1: Local OSS Model with Ollama (`Qwen3-Embedding-0.6B`)
 
@@ -126,7 +144,7 @@ export GEMINI_API_KEY=your_gemini_api_key
 
 ---
 
-## 4. Configuration Reference (`application.yaml`)
+## 5. Configuration Reference (`application.yaml`)
 
 ```yaml
 app:
@@ -147,7 +165,7 @@ app:
 
 ---
 
-## 5. Verification and Status API
+## 6. Verification and Status API
 
 Check the currently active embedding configuration and document counts by calling:
 

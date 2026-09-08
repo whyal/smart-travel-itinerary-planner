@@ -63,4 +63,51 @@ class ItineraryServiceTest {
         List<String> chunks = flux.collectList().block();
         assertThat(chunks).containsExactly("{\"destination\":", "\"Kyoto\"}");
     }
+
+    @Test
+    void testSanitizeItinerary_RemovesDuplicateLocationsAcrossDays() {
+        Itinerary.Activity act1 = new Itinerary.Activity("Morning", "Fushimi Inari Taisha", "Walk torii gates");
+        Itinerary.Activity act2 = new Itinerary.Activity("Afternoon", "Kiyomizu-dera", "Historic wooden temple");
+        Itinerary.DayPlan day1 = new Itinerary.DayPlan(1, "Southern & Eastern Kyoto", List.of(act1, act2));
+
+        // Day 2 mistakenly contains Fushimi Inari Taisha again (duplicate location)
+        Itinerary.Activity act3 = new Itinerary.Activity("Morning", "fushimi inari taisha ", "Torii path again");
+        Itinerary.Activity act4 = new Itinerary.Activity("Afternoon", "Arashiyama Bamboo Grove", "Walk the grove");
+        Itinerary.DayPlan day2 = new Itinerary.DayPlan(2, "Western Kyoto", List.of(act3, act4));
+
+        Itinerary raw = new Itinerary("Kyoto", List.of(day1, day2));
+
+        Itinerary sanitized = itineraryService.sanitizeItinerary(raw);
+
+        assertThat(sanitized).isNotNull();
+        assertThat(sanitized.days()).hasSize(2);
+
+        // Day 1 has both activities
+        assertThat(sanitized.days().get(0).activities()).hasSize(2);
+
+        // Day 2 has duplicate act3 removed, leaving only act4
+        assertThat(sanitized.days().get(1).activities()).hasSize(1);
+        assertThat(sanitized.days().get(1).activities().get(0).location()).isEqualTo("Arashiyama Bamboo Grove");
+    }
+
+    @Test
+    void testSanitizeItinerary_PreservesCleanItinerary() {
+        Itinerary.Activity act1 = new Itinerary.Activity("Morning", "Eiffel Tower", "Iconic view");
+        Itinerary.Activity act2 = new Itinerary.Activity("Afternoon", "Louvre Museum", "Mona Lisa");
+        Itinerary.DayPlan day1 = new Itinerary.DayPlan(1, "Paris Highlights", List.of(act1, act2));
+
+        Itinerary raw = new Itinerary("Paris", List.of(day1));
+        Itinerary sanitized = itineraryService.sanitizeItinerary(raw);
+
+        assertThat(sanitized).isNotNull();
+        assertThat(sanitized.days().get(0).activities()).hasSize(2);
+    }
+
+    @Test
+    void testSanitizeItinerary_NullHandling() {
+        assertThat(itineraryService.sanitizeItinerary(null)).isNull();
+
+        Itinerary emptyDays = new Itinerary("Tokyo", null);
+        assertThat(itineraryService.sanitizeItinerary(emptyDays)).isEqualTo(emptyDays);
+    }
 }

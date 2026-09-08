@@ -14,6 +14,7 @@ import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.google.genai.GoogleGenAiChatModel;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
@@ -115,14 +116,21 @@ public class AiConfig {
             ChatMemory chatMemory) {
 
         return builder
-                .defaultSystem("You are a knowledgeable travel assistant. Generate compact itineraries strictly adhering to the requested schema. \n" +
-                        "Rules:\n" +
-                        "- No greetings, pleasantries, or closing remarks.\n" +
-                        "- Keep activity descriptions concise (under 20 words).\n" +
-                        "- Provide practical 'gettingThere' transit details and accurate 'operatingHours' for each activity.")
+                .defaultSystem("You are an expert travel assistant. Generate compact, realistic itineraries adhering strictly to the requested schema.\n\n" +
+                        "Core Rules:\n" +
+                        "- Location Uniqueness: Every attraction, museum, restaurant, landmark, or specific venue MUST appear at most once across the entire multi-day itinerary. Never repeat visited locations on subsequent days.\n" +
+                        "- Selective Context Usage: Treat retrieved context documents as inspirational recommendations. Do NOT force every retrieved place into the plan; select only the most relevant spots that fit the requested duration and pace.\n" +
+                        "- Geographic Flow: Cluster activities by district or neighborhood per day to eliminate unnecessary commuting and backtracking.\n" +
+                        "- Realistic Pacing: Plan 2 to 4 major activities per day with practical 'gettingThere' transit details and accurate 'operatingHours'.\n" +
+                        "- Formatting: Output concise descriptions (under 20 words) with no greetings, pleasantries, or closing remarks.")
                 .defaultAdvisors(
                         MessageChatMemoryAdvisor.builder(chatMemory).build(),
-                        QuestionAnswerAdvisor.builder(vectorStore).build()
+                        QuestionAnswerAdvisor.builder(vectorStore)
+                                .searchRequest(SearchRequest.builder()
+                                        .topK(5)
+                                        .similarityThreshold(0.68)
+                                        .build())
+                                .build()
                 )
                 .build();
     }

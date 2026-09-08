@@ -240,6 +240,53 @@ class IngestionServiceTest {
             assertThat(ingestionService.getIngestedDocumentCount()).isZero();
             verifyNoInteractions(vectorStore);
         }
+
+        @Test
+        @DisplayName("Deduplication: Identical items in a single batch are deduplicated in-memory")
+        void testIngestStructuredDocuments_BatchDeduplication() {
+            TravelDocumentDto doc1 = new TravelDocumentDto(
+                    "kyoto-fushimi", "Kyoto", "Fushimi Inari", "shrine", "Fushimi", "Thousands of torii gates", null, null, null, null
+            );
+            TravelDocumentDto doc2 = new TravelDocumentDto(
+                    "kyoto-fushimi", "Kyoto", "Fushimi Inari", "shrine", "Fushimi", "Thousands of torii gates", null, null, null, null
+            );
+
+            int count = ingestionService.ingestDocuments(List.of(doc1, doc2), "Kyoto");
+
+            assertThat(count).isEqualTo(1);
+            assertThat(ingestionService.getIngestedDocumentCount()).isEqualTo(1);
+            assertThat(ingestionService.getDestinationDocumentCounts()).containsEntry("Kyoto", 1);
+
+            verify(vectorStore, times(1)).add(documentsCaptor.capture());
+            List<Document> captured = documentsCaptor.getValue();
+            assertThat(captured).hasSize(1);
+            assertThat(captured.get(0).getId()).isEqualTo("kyoto-fushimi");
+        }
+
+        @Test
+        @DisplayName("Deduplication: Documents without ID produce deterministic idempotent IDs based on content")
+        void testIngestStructuredDocuments_DeterministicIdGeneration() {
+            TravelDocumentDto docWithoutId = new TravelDocumentDto(
+                    null, "Kyoto", "Kinkaku-ji", "temple", "Kita", "Golden Pavilion zen temple", null, null, null, null
+            );
+
+            ingestionService.ingestDocuments(List.of(docWithoutId), "Kyoto");
+
+            verify(vectorStore, times(1)).add(documentsCaptor.capture());
+            Document firstCaptured = documentsCaptor.getValue().get(0);
+            String firstGeneratedId = firstCaptured.getId();
+
+            assertThat(firstGeneratedId).isNotBlank();
+
+            // Re-ingest the exact same document
+            ingestionService.ingestDocuments(List.of(docWithoutId), "Kyoto");
+
+            verify(vectorStore, times(2)).add(documentsCaptor.capture());
+            Document secondCaptured = documentsCaptor.getValue().get(0);
+            String secondGeneratedId = secondCaptured.getId();
+
+            assertThat(secondGeneratedId).isEqualTo(firstGeneratedId);
+        }
     }
 
     @Nested
