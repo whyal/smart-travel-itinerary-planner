@@ -77,7 +77,27 @@ flowchart TB
 
 ---
 
-## 3. Switching Models: Ready-to-Use Recipes
+## 3. Step-by-Step Model Switching Workflow
+
+Switching embedding models requires **zero code changes or recompilation**. Follow this 5-step checklist:
+
+1. **Step 1: Ensure Target Embedding Service is Running**
+   - *Ollama*: `ollama pull qwen3-embedding:0.6b` and ensure Ollama daemon is running.
+   - *HuggingFace TEI / vLLM*: Start the inference container on port `8000`.
+   - *Google Gemini*: Ensure `GEMINI_API_KEY` is exported.
+2. **Step 2: Set Environment Variables**
+   - Export `EMBEDDING_PROVIDER`, `EMBEDDING_MODEL`, `EMBEDDING_DIMENSIONS`, and the corresponding base URL or API key (see recipes below).
+3. **Step 3: Restart the Backend Application**
+   - Start or restart the Spring Boot backend (`./gradlew bootRun`).
+   - The backend automatically selects the target table (`vector_store_{provider}_{dimensions}`) and sets the proper index (HNSW for $\le 2000$ dims).
+4. **Step 4: Ingest Knowledge Documents for the New Vector Space**
+   - Because embeddings from different models inhabit distinct vector spaces, upload/preload documents into the newly selected table (see [Section 5: Document Ingestion Guide](#5-document-ingestion--knowledge-api-guide)).
+5. **Step 5: Verify Active Status**
+   - Check `GET /api/knowledge/status` to confirm the active provider, model, dimensions, and table name.
+
+---
+
+## 4. Switching Models: Ready-to-Use Recipes
 
 No Java code changes or recompilations are needed to switch models. Simply set the environment variables or update `application.yaml`.
 
@@ -126,7 +146,117 @@ export GEMINI_API_KEY=your_gemini_api_key
 
 ---
 
-## 4. Configuration Reference (`application.yaml`)
+## 5. Document Ingestion & Knowledge API Guide
+
+The backend provides four flexible ingestion pathways to load travel knowledge into the active `pgvector` store. All ingestion methods feature **deterministic deduplication** (idempotent SHA-256 UUIDs) to prevent duplicate vector rows.
+
+### A. Ingest Structured Travel Documents (`POST /api/knowledge/documents`)
+
+Ingest an array of rich travel items (attractions, restaurants, landmarks) with structured metadata.
+
+```bash
+curl -X POST "http://localhost:8080/api/knowledge/documents?destination=Kyoto" \
+  -H "Content-Type: application/json" \
+  -d '[
+    {
+      "id": "kyoto-fushimi-inari",
+      "destination": "Kyoto",
+      "title": "Fushimi Inari Taisha",
+      "category": "shrine",
+      "district": "Fushimi",
+      "content": "Famous Shinto shrine dedicated to the god of rice and agriculture, renowned for its thousands of vermilion torii gates winding up Mount Inari.",
+      "tags": ["shrine", "historic", "torii-gates"],
+      "suggestedDuration": "2-3 hours",
+      "bestTimeToVisit": "Early morning or dusk to avoid crowds",
+      "metadata": {
+        "admission": "Free",
+        "nearestStation": "JR Inari Station"
+      }
+    },
+    {
+      "id": "kyoto-kinkakuji",
+      "destination": "Kyoto",
+      "title": "Kinkaku-ji (Golden Pavilion)",
+      "category": "temple",
+      "district": "Kita",
+      "content": "Zen Buddhist temple covered in gold leaf overlooking the Kyoko-chi mirror pond.",
+      "tags": ["temple", "unesco", "zen"],
+      "suggestedDuration": "1-2 hours",
+      "bestTimeToVisit": "Morning opening hours",
+      "metadata": {
+        "admission": "500 JPY"
+      }
+    }
+  ]'
+```
+
+**JSON Field Reference for `TravelDocumentDto`**:
+* `id` *(optional)*: Unique string ID. If omitted, a deterministic SHA-256 UUID is generated automatically from content.
+* `destination` *(optional)*: City or region (e.g. `"Kyoto"`, `"Tokyo"`).
+* `title` *(required)*: Name of the landmark or attraction.
+* `category` *(optional)*: E.g. `"attraction"`, `"temple"`, `"shrine"`, `"restaurant"`, `"museum"`.
+* `district` *(optional)*: Neighborhood or area (e.g. `"Higashiyama"`, `"Arashiyama"`).
+* `content` *(required)*: Detailed description or guide text used for embeddings and RAG retrieval.
+* `tags` *(optional)*: Array of string tags (e.g. `["culture", "view"]`).
+* `suggestedDuration` *(optional)*: E.g. `"2 hours"`.
+* `bestTimeToVisit` *(optional)*: E.g. `"Morning"`.
+* `metadata` *(optional)*: Custom key-value map for additional properties.
+
+---
+
+### B. Ingest Raw Travel Articles (`POST /api/knowledge/articles`)
+
+Quickly ingest free-form travel blog posts, notes, or article paragraphs for a destination.
+
+```bash
+curl -X POST "http://localhost:8080/api/knowledge/articles" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "destination": "Osaka",
+    "articles": [
+      "Dotonbori is Osaka’s most vibrant nightlife and dining district, famous for its giant neon signs like the Glico Running Man and street food stalls serving fresh Takoyaki.",
+      "Osaka Castle (Osakajo) is a historic Japanese fortress surrounded by secondary citadels, moats, and Nishinomaru Garden containing over 600 cherry trees."
+    ]
+  }'
+```
+
+---
+
+### C. File Upload Ingestion (`POST /api/knowledge/upload`)
+
+Upload travel guide files directly via `multipart/form-data`. The backend automatically parses and chunks the file based on format:
+
+1. **PDF Documents (`.pdf`)**: Parsed page-by-page and split into token chunks using `TokenTextSplitter`.
+2. **JSON Datasets (`.json`)**: Supports arrays of `TravelDocumentDto`, arrays of raw strings, or objects with `"documents"`/`"articles"` wrappers.
+3. **Plain Text / Markdown (`.txt`, `.md`)**: Automatically segmented by double newlines into distinct article sections.
+
+**Example: Upload a PDF Travel Guide**:
+```bash
+curl -X POST "http://localhost:8080/api/knowledge/upload" \
+  -F "file=@/path/to/kyoto_guide.pdf" \
+  -F "destination=Kyoto"
+```
+
+**Example: Upload a JSON Document File**:
+```bash
+curl -X POST "http://localhost:8080/api/knowledge/upload" \
+  -F "file=@/path/to/tokyo_knowledge.json" \
+  -F "destination=Tokyo"
+```
+
+---
+
+### D. Preloaded Destination Ingestion (`POST /api/knowledge/preload`)
+
+Trigger ingestion of bundled dataset files packaged in the backend classpath (located under `classpath:data/{destination}/{destination}_travel_knowledge.json`).
+
+```bash
+curl -X POST "http://localhost:8080/api/knowledge/preload?destination=Kyoto"
+```
+
+---
+
+## 6. Configuration Reference (`application.yaml`)
 
 ```yaml
 app:
@@ -147,15 +277,14 @@ app:
 
 ---
 
-## 5. Verification and Status API
+## 7. Verification & Search APIs
 
-Check the currently active embedding configuration and document counts by calling:
-
+### A. Check RAG Status & Ingested Document Counts
 ```bash
 curl http://localhost:8080/api/knowledge/status
 ```
 
-Example JSON response:
+Example response:
 ```json
 {
   "status": "ready",
@@ -170,4 +299,10 @@ Example JSON response:
   "embeddingDimensions": 1024,
   "vectorTable": "vector_store_ollama_1024"
 }
+```
+
+### B. Test Vector Similarity Search Directly
+Test semantic similarity search without generating an itinerary:
+```bash
+curl "http://localhost:8080/api/knowledge/similarity-search?query=zen+temple+with+gardens&topK=3"
 ```
