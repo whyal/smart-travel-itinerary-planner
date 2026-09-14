@@ -1,50 +1,54 @@
-# 🧳 AI Travel Planner
+# AI Travel Planner
 
-An AI-powered travel planning application that generates personalized itineraries based on user preferences. The project combines a modern React frontend with a Spring Boot backend powered by Google Gemini to provide intelligent travel recommendations.
+![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![Java](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.1-6DB33F?logo=springboot&logoColor=white)
+![Spring AI](https://img.shields.io/badge/Spring_AI-2.0-6DB33F?logo=spring&logoColor=white)
+![pgvector](https://img.shields.io/badge/PostgreSQL-pgvector-4169E1?logo=postgresql&logoColor=white)
 
----
-
-## ✨ Features
-
-* 🤖 AI-generated travel itineraries
-* 🧠 Modular Embedding Architecture (Google Gemini & local OSS like `Qwen3-Embedding-0.6B`)
-* 🗺️ Personalized recommendations based on budget and interests
-* 📅 Day-by-day itinerary generation
-* 🔌 RESTful API architecture with SSE Streaming
+A travel planning application that generates personalized itineraries based on user preferences. Built with a React/Next.js frontend and a Spring Boot backend integrating Google Gemini, Retrieval-Augmented Generation (RAG), and vector search.
 
 ---
 
-## 🚀 Tech Stack
+## Features
+
+- AI-generated travel itineraries based on budget, dates, and interests
+- Modular embedding architecture supporting Google Gemini and local OSS models (e.g., `Qwen3-Embedding-0.6B`)
+- Day-by-day itinerary breakdown
+- RESTful API architecture with Server-Sent Events (SSE) streaming for real-time generation
+
+---
+
+## Tech Stack
 
 ### Frontend
-
-![Next.js](https://img.shields.io/badge/Next.js-black?logo=next.js)
-![React](https://img.shields.io/badge/React-61DAFB?logo=react\&logoColor=black)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?logo=tailwindcss\&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript\&logoColor=white)
+- Next.js 16 (App Router)
+- React 19
+- TypeScript
+- Tailwind CSS
 
 ### Backend
-
-![Java](https://img.shields.io/badge/Java-OpenJDK-ED8B00?logo=openjdk\&logoColor=white)
-![Spring Boot](https://img.shields.io/badge/Spring_Boot-6DB33F?logo=springboot\&logoColor=white)
-![Spring AI](https://img.shields.io/badge/Spring_AI-6DB33F?logo=spring\&logoColor=white)
-![Google Gemini](https://img.shields.io/badge/Google-Gemini-4285F4?logo=google-gemini\&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql\&logoColor=white)
+- Java 21
+- Spring Boot 4
+- Spring AI 2.0
+- Google Gemini
+- PostgreSQL with pgvector
 
 ---
 
-## 📁 Project Modules
+## Project Structure
 
-| Module        | Description                                 |
-| ------------- | ------------------------------------------- |
-| **frontend/** | User interface built with Next.js and React |
-| **backend/**  | Spring Boot REST API with AI integration    |
+| Module | Description |
+| --- | --- |
+| `frontend/` | Web client built with Next.js and React |
+| `backend/` | Spring Boot REST API with AI integration |
 
 For implementation details, setup instructions, and architecture, see the README inside each module.
 
 ---
 
-## 🛠️ Getting Started
+## Getting Started
 
 ### 1. Clone the repository
 
@@ -57,12 +61,12 @@ cd smart-travel-itinerary-planner
 
 ```bash
 cd backend
-# Follow backend/README.md
+# Follow instructions in backend/README.md
 ```
 
 ### 3. Start the frontend
 
 ```bash
 cd frontend
-# Follow frontend/README.md
+# Follow instructions in frontend/README.md
 ```
