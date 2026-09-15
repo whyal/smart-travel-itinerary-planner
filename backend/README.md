@@ -4,9 +4,7 @@ Core Spring Boot service for the AI Travel Itinerary Generator. This backend use
 
 It exposes both a synchronous structured JSON endpoint and a reactive Server-Sent Events (SSE) streaming endpoint for progressive frontend rendering.
 
----
-
-## Key Features
+## Features
 
 - **Dual-Mode Execution:**
   - **Synchronous (`/api/itinerary/generate`):** Uses Spring AI's `.entity()` mapping to return strongly-typed Java Records.
