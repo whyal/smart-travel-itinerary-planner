@@ -1,27 +1,106 @@
 # AI Travel Itinerary Generator — Backend API
 
-Core Spring Boot service for the AI Travel Itinerary Generator. This backend uses **Spring Boot 4.1.0** and **Spring AI 2.0.0** with Java 21 to generate travel plans using Google Gemini, Retrieval-Augmented Generation (RAG), and per-user conversational memory.
+Core Spring Boot service for the AI Travel Itinerary Generator. Built with **Spring Boot 4.1.0**, **Spring AI 2.0.0**, and **Java 21**, providing AI-driven travel planning with Google Gemini, context-aware RAG, modular vector embeddings, and reactive SSE streaming.
 
-It exposes both a synchronous structured JSON endpoint and a reactive Server-Sent Events (SSE) streaming endpoint for progressive frontend rendering.
+---
+
+## Prerequisites
+
+Ensure you have the following installed before setting up the backend:
+
+- **Java Development Kit (JDK) 21+**
+- **PostgreSQL 15+** with the **`pgvector`** extension installed
+- **Google Gemini API Key** (or local Ollama / OpenAI-compatible endpoint if using OSS embeddings)
+
+---
+
+## Getting Started & Setup
+
+### 1. Database Configuration
+
+Create the PostgreSQL database and ensure the `vector` extension is enabled:
+
+```sql
+CREATE DATABASE tripplanner;
+\c tripplanner;
+CREATE EXTENSION IF NOT EXISTS vector;
+```
+
+### 2. Environment Variables
+
+Create a `.env` file in the `backend/` directory (or copy from `.env.example`):
+
+```bash
+cp .env.example .env
+```
+
+Configure your credentials in `backend/.env`:
+
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+DB_USERNAME=postgres
+DB_PASSWORD=your_postgres_password_here
+# Optional overrides:
+# SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/tripplanner
+# EMBEDDING_PROVIDER=google # Options: google, ollama, openai-compatible
+```
+
+### 3. Build & Run
+
+Run the application using the Gradle wrapper:
+
+```bash
+# Start the development server (runs on http://localhost:8080)
+./gradlew bootRun
+
+# Run unit and integration tests (uses in-memory vector store, no live DB required)
+./gradlew test
+
+# Build executable JAR
+./gradlew build
+```
+
+---
+
+## Embedding Model Configuration
+
+The backend supports hot-swapping embedding models via environment variables without code changes:
+
+| Provider | `EMBEDDING_PROVIDER` | `EMBEDDING_MODEL` | `EMBEDDING_DIMENSIONS` | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| **Google Gemini (Default)** | `google` | `gemini-embedding-001` | `3072` | Cloud-hosted, requires `GEMINI_API_KEY` |
+| **Ollama (Local OSS)** | `ollama` | `qwen3-embedding:0.6b` | `1024` | Requires Ollama at `http://localhost:11434` |
+| **TEI / vLLM (OSS)** | `openai-compatible` | `Qwen/Qwen3-Embedding-0.6B` | `1024` | Requires TEI at `http://localhost:8000` |
+
+> For in-depth embedding recipes, vector dimensions, and schema partitioning details, see [`docs/EMBEDDINGS.md`](../docs/EMBEDDINGS.md).
+
+---
+
+## REST API Overview
+
+### Itinerary Generation & Persistence
+- `POST /api/itinerary/generate`: Synchronous structured JSON itinerary generation.
+- `GET /api/itinerary/stream`: Reactive Server-Sent Events (SSE) token streaming for progressive UI rendering.
+- `GET /api/itineraries`: Retrieve all saved itineraries.
+- `POST /api/itineraries`: Save an itinerary to the database.
+- `GET /api/itineraries/{id}`: Retrieve a specific saved itinerary.
+- `DELETE /api/itineraries/{id}`: Delete a saved itinerary.
+
+### Knowledge Base & Ingestion (`/api/admin/ingest`)
+- `POST /api/admin/ingest/documents`: Ingest structured travel documents with metadata.
+- `POST /api/admin/ingest/batch`: Ingest a batch of destination documents.
+- `POST /api/admin/ingest/articles`: Ingest raw travel articles into vector space.
+- `POST /api/admin/ingest/upload`: Multi-part manual file upload (`.pdf`, `.json`, `.txt`, `.md`).
+- `POST /api/admin/ingest/preload`: Preload default datasets from classpath.
+- `GET /api/admin/ingest/status`: Check vector store ingestion statistics per destination.
+- `GET /api/admin/ingest/similarity-search?query=...&topK=...`: Test vector store similarity retrieval.
 
 ---
 
 ## Key Features
 
-- **Dual-Mode Execution:**
-  - **Synchronous (`/api/itinerary/generate`):** Uses Spring AI's `.entity()` mapping to return strongly-typed Java Records.
-  - **Reactive Streaming (`/api/itinerary/stream`):** Uses Spring WebFlux and `Flux<String>` to stream raw JSON tokens over SSE as the model generates them.
-- **Provider-Level Structured Output:** Configured for native JSON mode on Google GenAI (`.useProviderStructuredOutput()`) to ensure schema-compliant output without markdown wrapper artifacts.
-- **Modular Embedding Architecture (Cloud & OSS):** Pluggable embedding providers supporting Google Gemini (`gemini-embedding-001`), local OSS models like `Qwen3-Embedding-0.6B` via Ollama or HuggingFace TEI, and OpenAI-compatible inference servers. Dynamic table isolation (`vector_store_{provider}_{dimensions}`) prevents vector dimension mismatch issues. See [docs/EMBEDDINGS.md](../docs/EMBEDDINGS.md) and [backend/AGENTS.md](AGENTS.md).
-- **Context-Aware RAG with Persistent `PgVectorStore`:** Persists document embeddings directly in PostgreSQL via the `pgvector` extension with automatic HNSW indexing for <= 2000 dimension models.
-- **Destination-Agnostic Knowledge Base:** Embeds structured and raw knowledge documents for any destination (e.g. Kyoto, Tokyo, Paris, Rome, Seoul, etc.).
-- **Admin Ingestion REST API (`/api/admin/ingest`):**
-  - `POST /api/admin/ingest/documents`: Ingests an array of structured travel documents with metadata (title, category, district, duration, best time, tags).
-  - `POST /api/admin/ingest/batch`: Ingests a batch of travel documents with a destination tag.
-  - `POST /api/admin/ingest/articles`: Ingests raw article text strings dynamically for any destination.
-  - `POST /api/admin/ingest/upload`: Multi-part manual file upload supporting `.pdf`, `.json`, `.txt`, and `.md` formats.
-  - `POST /api/admin/ingest/preload`: Preloads datasets from classpath or custom resource paths.
-  - `GET /api/admin/ingest/status`: Checks total documents and breakdown per destination.
-  - `GET /api/admin/ingest/similarity-search?query=...&topK=...`: Inspects vector store similarity retrieval.
-- **Session-Isolated Chat Memory (`MessageChatMemoryAdvisor`):** Implements dynamic `conversationId` binding (`ChatMemory.CONVERSATION_ID`) to isolate multi-turn chat histories across concurrent users.
-- **Type-Safe Serialization:** Built on Java 21 Records and Jackson 3 for robust JSON processing.
+- **Dual-Mode Execution:** Synchronous typed records (`.entity()`) and reactive streaming (`Flux<String>`) over SSE.
+- **Provider-Level Structured Output:** Native JSON mode on Google GenAI (`.useProviderStructuredOutput()`) to guarantee schema compliance without markdown wrapping.
+- **Dynamic Vector Table Isolation:** Automatically isolates embeddings by provider and dimensions (`vector_store_{provider}_{dimensions}`) to prevent vector dimension collisions.
+- **Session-Isolated Chat Memory:** Isolates multi-turn chat sessions per user via `conversationId` UUIDs.
+
