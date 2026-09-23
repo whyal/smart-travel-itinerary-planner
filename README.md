@@ -9,16 +9,12 @@
 
 A travel planning application that generates personalized itineraries based on user preferences. Built with a React/Next.js frontend and a Spring Boot backend integrating Google Gemini, Retrieval-Augmented Generation (RAG), and vector search.
 
----
-
 ## Features
 
 - AI-generated travel itineraries based on budget, dates, and interests
 - Modular embedding architecture supporting Google Gemini and local OSS models (e.g., `Qwen3-Embedding-0.6B`)
 - Day-by-day itinerary breakdown
 - RESTful API architecture with Server-Sent Events (SSE) streaming for real-time generation
-
----
 
 ## Tech Stack
 
@@ -35,8 +31,6 @@ A travel planning application that generates personalized itineraries based on u
 - Google Gemini
 - PostgreSQL with pgvector
 
----
-
 ## Project Structure
 
 | Module | Description |
@@ -45,8 +39,6 @@ A travel planning application that generates personalized itineraries based on u
 | `backend/` | Spring Boot REST API with AI integration |
 
 For implementation details, setup instructions, and architecture, see the README inside each module.
-
----
 
 ## Getting Started
 
