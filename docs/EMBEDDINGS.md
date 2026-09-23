@@ -2,8 +2,6 @@
 
 This document outlines the **modular embedding architecture** of the AI Travel Itinerary Planner, explains how to switch between Cloud models (like Google Gemini) and local Open-Source Software (OSS) models (such as `Qwen/Qwen3-Embedding-0.6B`), and details how the system prevents vector dimension collisions in PostgreSQL `pgvector`.
 
----
-
 ## 1. High-Level System Architecture
 
 ```mermaid
@@ -21,11 +19,11 @@ flowchart TB
     subgraph ModularEmbedding ["3. Modular Embedding Abstraction (Spring AI)"]
         direction TB
         Selector{"app.embedding.provider\nConfiguration Router"}
-        
+
         GoogleProvider["Google GenAI Provider\n• Model: gemini-embedding-001\n• Dimensions: 3072 / 768"]
         OllamaProvider["Ollama OSS Provider\n• Model: qwen3-embedding:0.6b / bge-m3\n• Base URL: http://localhost:11434\n• Dimensions: 1024"]
         OpenAiCompatProvider["OpenAI-Compatible / TEI / vLLM Provider\n• Model: Qwen/Qwen3-Embedding-0.6B\n• Base URL: http://localhost:8000\n• Dimensions: 1024"]
-        
+
         Selector -->|google| GoogleProvider
         Selector -->|ollama| OllamaProvider
         Selector -->|openai-compatible| OpenAiCompatProvider
@@ -43,49 +41,47 @@ flowchart TB
     Frontend --> REST
     REST --> ItinService
     REST --> IngestService
-    
+
     ItinService --> VectorStoreAdapter
     IngestService --> VectorStoreAdapter
-    
+
     GoogleProvider -->|EmbeddingModel| VectorStoreAdapter
     OllamaProvider -->|EmbeddingModel| VectorStoreAdapter
     OpenAiCompatProvider -->|EmbeddingModel| VectorStoreAdapter
-    
+
     VectorStoreAdapter --> PostgreSQL
     VectorStoreAdapter --> SimpleStore
 ```
 
----
-
 ## 2. Key Design Decisions & Invariants
 
 ### A. Dynamic Table Isolation (Preventing Dimension Mismatch)
-* **Problem**: In PostgreSQL `pgvector`, columns have fixed vector dimensions (e.g. `vector(3072)` for Gemini, `vector(1024)` for Qwen3). Additionally, embeddings from different models inhabit distinct vector spaces and cannot be compared.
-* **Solution**: The backend automatically derives the table name as:
+
+- **Problem**: In PostgreSQL `pgvector`, columns have fixed vector dimensions (e.g. `vector(3072)` for Gemini, `vector(1024)` for Qwen3). Additionally, embeddings from different models inhabit distinct vector spaces and cannot be compared.
+- **Solution**: The backend automatically derives the table name as:
   ```
   vector_store_{provider}_{dimensions}
   ```
+
   - Google Gemini (3072): `vector_store_google_3072`
   - Ollama Qwen3 (1024): `vector_store_ollama_1024`
   - TEI Qwen3 (1024): `vector_store_openai_compatible_1024`
-* You can also override the table name explicitly with `app.embedding.table-name` or `EMBEDDING_TABLE_NAME`.
+- You can also override the table name explicitly with `app.embedding.table-name` or `EMBEDDING_TABLE_NAME`.
 
 ### B. Intelligent Index Selection (HNSW vs Flat)
-* `pgvector` HNSW indexes support vector dimensions up to **2,000**.
-* When `dimensions <= 2000` (e.g. Qwen3-Embedding-0.6B with 1024 dims), `PgVectorStore` automatically configures **HNSW** for fast approximate nearest neighbor retrieval.
-* When `dimensions > 2000` (e.g. Gemini 3072 dims), `PgVectorStore` automatically falls back to **NONE** (exact scan).
 
----
+- `pgvector` HNSW indexes support vector dimensions up to **2,000**.
+- When `dimensions <= 2000` (e.g. Qwen3-Embedding-0.6B with 1024 dims), `PgVectorStore` automatically configures **HNSW** for fast approximate nearest neighbor retrieval.
+- When `dimensions > 2000` (e.g. Gemini 3072 dims), `PgVectorStore` automatically falls back to **NONE** (exact scan).
 
 ## 3. Step-by-Step Model Switching Workflow
-<<<<<<< HEAD
 
 Switching embedding models requires **zero code changes or recompilation**. Follow this 5-step checklist:
 
 1. **Step 1: Ensure Target Embedding Service is Running**
-   - *Ollama*: `ollama pull qwen3-embedding:0.6b` and ensure Ollama daemon is running.
-   - *HuggingFace TEI / vLLM*: Start the inference container on port `8000`.
-   - *Google Gemini*: Ensure `GEMINI_API_KEY` is exported.
+   - _Ollama_: `ollama pull qwen3-embedding:0.6b` and ensure Ollama daemon is running.
+   - _HuggingFace TEI / vLLM_: Start the inference container on port `8000`.
+   - _Google Gemini_: Ensure `GEMINI_API_KEY` is exported.
 2. **Step 2: Set Environment Variables**
    - Export `EMBEDDING_PROVIDER`, `EMBEDDING_MODEL`, `EMBEDDING_DIMENSIONS`, and the corresponding base URL or API key (see recipes below).
 3. **Step 3: Restart the Backend Application**
@@ -95,30 +91,6 @@ Switching embedding models requires **zero code changes or recompilation**. Foll
    - Because embeddings from different models inhabit distinct vector spaces, upload/preload documents into the newly selected table (see [Section 5: Document Ingestion Guide](#5-document-ingestion--knowledge-api-guide)).
 5. **Step 5: Verify Active Status**
    - Check `GET /api/knowledge/status` to confirm the active provider, model, dimensions, and table name.
-
----
-
-## 4. Switching Models: Ready-to-Use Recipes
-=======
->>>>>>> c8e0806d172f5b8121930015a05b7e3232f30cf2
-
-Switching embedding models requires **zero code changes or recompilation**. Follow this 5-step checklist:
-
-1. **Step 1: Ensure Target Embedding Service is Running**
-   - *Ollama*: `ollama pull qwen3-embedding:0.6b` and ensure Ollama daemon is running.
-   - *HuggingFace TEI / vLLM*: Start the inference container on port `8000`.
-   - *Google Gemini*: Ensure `GEMINI_API_KEY` is exported.
-2. **Step 2: Set Environment Variables**
-   - Export `EMBEDDING_PROVIDER`, `EMBEDDING_MODEL`, `EMBEDDING_DIMENSIONS`, and the corresponding base URL or API key (see recipes below).
-3. **Step 3: Restart the Backend Application**
-   - Start or restart the Spring Boot backend (`./gradlew bootRun`).
-   - The backend automatically selects the target table (`vector_store_{provider}_{dimensions}`) and sets the proper index (HNSW for $\le 2000$ dims).
-4. **Step 4: Ingest Knowledge Documents for the New Vector Space**
-   - Because embeddings from different models inhabit distinct vector spaces, upload/preload documents into the newly selected table (`POST /api/knowledge/documents`, `/upload`, or `/preload`).
-5. **Step 5: Verify Active Status**
-   - Check `GET /api/knowledge/status` to confirm the active provider, model, dimensions, and table name.
-
----
 
 ## 4. Switching Models: Ready-to-Use Recipes
 
@@ -136,8 +108,6 @@ Switching embedding models requires **zero code changes or recompilation**. Foll
    export OLLAMA_BASE_URL=http://localhost:11434
    ```
 
----
-
 ### Recipe 2: High-Performance OSS Model with HuggingFace TEI (`Qwen3-Embedding-0.6B`)
 
 1. **Launch HuggingFace Text Embeddings Inference (TEI) container:**
@@ -154,8 +124,6 @@ Switching embedding models requires **zero code changes or recompilation**. Foll
    export OPENAI_COMPAT_BASE_URL=http://localhost:8000
    ```
 
----
-
 ### Recipe 3: Cloud Provider with Google Gemini (`gemini-embedding-001`)
 
 ```bash
@@ -165,9 +133,6 @@ export EMBEDDING_DIMENSIONS=3072
 export GEMINI_API_KEY=your_gemini_api_key
 ```
 
----
-
-<<<<<<< HEAD
 ## 5. Document Ingestion & Knowledge API Guide
 
 The backend provides four flexible ingestion pathways to load travel knowledge into the active `pgvector` store. All ingestion methods feature **deterministic deduplication** (idempotent SHA-256 UUIDs) to prevent duplicate vector rows.
@@ -213,18 +178,17 @@ curl -X POST "http://localhost:8080/api/knowledge/documents?destination=Kyoto" \
 ```
 
 **JSON Field Reference for `TravelDocumentDto`**:
-* `id` *(optional)*: Unique string ID. If omitted, a deterministic SHA-256 UUID is generated automatically from content.
-* `destination` *(optional)*: City or region (e.g. `"Kyoto"`, `"Tokyo"`).
-* `title` *(required)*: Name of the landmark or attraction.
-* `category` *(optional)*: E.g. `"attraction"`, `"temple"`, `"shrine"`, `"restaurant"`, `"museum"`.
-* `district` *(optional)*: Neighborhood or area (e.g. `"Higashiyama"`, `"Arashiyama"`).
-* `content` *(required)*: Detailed description or guide text used for embeddings and RAG retrieval.
-* `tags` *(optional)*: Array of string tags (e.g. `["culture", "view"]`).
-* `suggestedDuration` *(optional)*: E.g. `"2 hours"`.
-* `bestTimeToVisit` *(optional)*: E.g. `"Morning"`.
-* `metadata` *(optional)*: Custom key-value map for additional properties.
 
----
+- `id` _(optional)_: Unique string ID. If omitted, a deterministic SHA-256 UUID is generated automatically from content.
+- `destination` _(optional)_: City or region (e.g. `"Kyoto"`, `"Tokyo"`).
+- `title` _(required)_: Name of the landmark or attraction.
+- `category` _(optional)_: E.g. `"attraction"`, `"temple"`, `"shrine"`, `"restaurant"`, `"museum"`.
+- `district` _(optional)_: Neighborhood or area (e.g. `"Higashiyama"`, `"Arashiyama"`).
+- `content` _(required)_: Detailed description or guide text used for embeddings and RAG retrieval.
+- `tags` _(optional)_: Array of string tags (e.g. `["culture", "view"]`).
+- `suggestedDuration` _(optional)_: E.g. `"2 hours"`.
+- `bestTimeToVisit` _(optional)_: E.g. `"Morning"`.
+- `metadata` _(optional)_: Custom key-value map for additional properties.
 
 ### B. Ingest Raw Travel Articles (`POST /api/knowledge/articles`)
 
@@ -242,8 +206,6 @@ curl -X POST "http://localhost:8080/api/knowledge/articles" \
   }'
 ```
 
----
-
 ### C. File Upload Ingestion (`POST /api/knowledge/upload`)
 
 Upload travel guide files directly via `multipart/form-data`. The backend automatically parses and chunks the file based on format:
@@ -253,6 +215,7 @@ Upload travel guide files directly via `multipart/form-data`. The backend automa
 3. **Plain Text / Markdown (`.txt`, `.md`)**: Automatically segmented by double newlines into distinct article sections.
 
 **Example: Upload a PDF Travel Guide**:
+
 ```bash
 curl -X POST "http://localhost:8080/api/knowledge/upload" \
   -F "file=@/path/to/kyoto_guide.pdf" \
@@ -260,13 +223,12 @@ curl -X POST "http://localhost:8080/api/knowledge/upload" \
 ```
 
 **Example: Upload a JSON Document File**:
+
 ```bash
 curl -X POST "http://localhost:8080/api/knowledge/upload" \
   -F "file=@/path/to/tokyo_knowledge.json" \
   -F "destination=Tokyo"
 ```
-
----
 
 ### D. Preloaded Destination Ingestion (`POST /api/knowledge/preload`)
 
@@ -276,12 +238,7 @@ Trigger ingestion of bundled dataset files packaged in the backend classpath (lo
 curl -X POST "http://localhost:8080/api/knowledge/preload?destination=Kyoto"
 ```
 
----
-
 ## 6. Configuration Reference (`application.yaml`)
-=======
-## 5. Configuration Reference (`application.yaml`)
->>>>>>> c8e0806d172f5b8121930015a05b7e3232f30cf2
 
 ```yaml
 app:
@@ -300,22 +257,18 @@ app:
       api-key: ${OPENAI_COMPAT_API_KEY:dummy-key}
 ```
 
----
-
-<<<<<<< HEAD
 ## 7. Verification & Search APIs
-=======
-## 6. Verification and Status API
 
 Check the currently active embedding configuration and document counts by calling:
->>>>>>> c8e0806d172f5b8121930015a05b7e3232f30cf2
 
 ### A. Check RAG Status & Ingested Document Counts
+
 ```bash
 curl http://localhost:8080/api/knowledge/status
 ```
 
 Example response:
+
 ```json
 {
   "status": "ready",
@@ -333,7 +286,9 @@ Example response:
 ```
 
 ### B. Test Vector Similarity Search Directly
+
 Test semantic similarity search without generating an itinerary:
+
 ```bash
 curl "http://localhost:8080/api/knowledge/similarity-search?query=zen+temple+with+gardens&topK=3"
 ```
