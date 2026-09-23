@@ -95,9 +95,7 @@ The backend supports hot-swapping embedding models via environment variables wit
 - `GET /api/admin/ingest/status`: Check vector store ingestion statistics per destination.
 - `GET /api/admin/ingest/similarity-search?query=...&topK=...`: Test vector store similarity retrieval.
 
----
-
-## Key Features
+## Features
 
 - **Dual-Mode Execution:** Synchronous typed records (`.entity()`) and reactive streaming (`Flux<String>`) over SSE.
 - **Provider-Level Structured Output:** Native JSON mode on Google GenAI (`.useProviderStructuredOutput()`) to guarantee schema compliance without markdown wrapping.

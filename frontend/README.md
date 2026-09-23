@@ -83,8 +83,7 @@ npx prettier --check .
 ## Screenshots
 
 ![Itinerary generation form](https://github.com/user-attachments/assets/3a0c8ffe-d68c-4b31-b5f7-d933f02999f9)
-*Figure 1: User destination and preference input form.*
+_Figure 1: User destination and preference input form._
 
 ![Generated Itinerary](https://github.com/user-attachments/assets/d17189dd-9a4e-4c1c-9fb6-03eedd130934)
-*Figure 2: Generated itinerary display.*
-
+_Figure 2: Generated itinerary display._
