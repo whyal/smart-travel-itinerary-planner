@@ -2,8 +2,6 @@
 
 Core Spring Boot service for the AI Travel Itinerary Generator. Built with **Spring Boot 4.1.0**, **Spring AI 2.0.0**, and **Java 21**, providing AI-driven travel planning with Google Gemini, context-aware RAG, modular vector embeddings, and reactive SSE streaming.
 
----
-
 ## Prerequisites
 
 Ensure you have the following installed before setting up the backend:
@@ -11,8 +9,6 @@ Ensure you have the following installed before setting up the backend:
 - **Java Development Kit (JDK) 21+**
 - **PostgreSQL 15+** with the **`pgvector`** extension installed
 - **Google Gemini API Key** (or local Ollama / OpenAI-compatible endpoint if using OSS embeddings)
-
----
 
 ## Getting Started & Setup
 
@@ -60,25 +56,22 @@ Run the application using the Gradle wrapper:
 ./gradlew build
 ```
 
----
-
 ## Embedding Model Configuration
 
 The backend supports hot-swapping embedding models via environment variables without code changes:
 
-| Provider | `EMBEDDING_PROVIDER` | `EMBEDDING_MODEL` | `EMBEDDING_DIMENSIONS` | Notes |
-| :--- | :--- | :--- | :--- | :--- |
-| **Google Gemini (Default)** | `google` | `gemini-embedding-001` | `3072` | Cloud-hosted, requires `GEMINI_API_KEY` |
-| **Ollama (Local OSS)** | `ollama` | `qwen3-embedding:0.6b` | `1024` | Requires Ollama at `http://localhost:11434` |
-| **TEI / vLLM (OSS)** | `openai-compatible` | `Qwen/Qwen3-Embedding-0.6B` | `1024` | Requires TEI at `http://localhost:8000` |
+| Provider                    | `EMBEDDING_PROVIDER` | `EMBEDDING_MODEL`           | `EMBEDDING_DIMENSIONS` | Notes                                       |
+| :-------------------------- | :------------------- | :-------------------------- | :--------------------- | :------------------------------------------ |
+| **Google Gemini (Default)** | `google`             | `gemini-embedding-001`      | `3072`                 | Cloud-hosted, requires `GEMINI_API_KEY`     |
+| **Ollama (Local OSS)**      | `ollama`             | `qwen3-embedding:0.6b`      | `1024`                 | Requires Ollama at `http://localhost:11434` |
+| **TEI / vLLM (OSS)**        | `openai-compatible`  | `Qwen/Qwen3-Embedding-0.6B` | `1024`                 | Requires TEI at `http://localhost:8000`     |
 
 > For in-depth embedding recipes, vector dimensions, and schema partitioning details, see [`docs/EMBEDDINGS.md`](../docs/EMBEDDINGS.md).
-
----
 
 ## REST API Overview
 
 ### Itinerary Generation & Persistence
+
 - `POST /api/itinerary/generate`: Synchronous structured JSON itinerary generation.
 - `GET /api/itinerary/stream`: Reactive Server-Sent Events (SSE) token streaming for progressive UI rendering.
 - `GET /api/itineraries`: Retrieve all saved itineraries.
@@ -87,6 +80,7 @@ The backend supports hot-swapping embedding models via environment variables wit
 - `DELETE /api/itineraries/{id}`: Delete a saved itinerary.
 
 ### Knowledge Base & Ingestion (`/api/admin/ingest`)
+
 - `POST /api/admin/ingest/documents`: Ingest structured travel documents with metadata.
 - `POST /api/admin/ingest/batch`: Ingest a batch of destination documents.
 - `POST /api/admin/ingest/articles`: Ingest raw travel articles into vector space.
@@ -101,4 +95,3 @@ The backend supports hot-swapping embedding models via environment variables wit
 - **Provider-Level Structured Output:** Native JSON mode on Google GenAI (`.useProviderStructuredOutput()`) to guarantee schema compliance without markdown wrapping.
 - **Dynamic Vector Table Isolation:** Automatically isolates embeddings by provider and dimensions (`vector_store_{provider}_{dimensions}`) to prevent vector dimension collisions.
 - **Session-Isolated Chat Memory:** Isolates multi-turn chat sessions per user via `conversationId` UUIDs.
-
