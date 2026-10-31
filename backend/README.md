@@ -79,15 +79,16 @@ The backend supports hot-swapping embedding models via environment variables wit
 - `GET /api/itineraries/{id}`: Retrieve a specific saved itinerary.
 - `DELETE /api/itineraries/{id}`: Delete a saved itinerary.
 
-### Knowledge Base & Ingestion (`/api/admin/ingest`)
+### Knowledge Base & Ingestion (`/api/knowledge`)
 
-- `POST /api/admin/ingest/documents`: Ingest structured travel documents with metadata.
-- `POST /api/admin/ingest/batch`: Ingest a batch of destination documents.
-- `POST /api/admin/ingest/articles`: Ingest raw travel articles into vector space.
-- `POST /api/admin/ingest/upload`: Multi-part manual file upload (`.pdf`, `.json`, `.txt`, `.md`).
-- `POST /api/admin/ingest/preload`: Preload default datasets from classpath.
-- `GET /api/admin/ingest/status`: Check vector store ingestion statistics per destination.
-- `GET /api/admin/ingest/similarity-search?query=...&topK=...`: Test vector store similarity retrieval.
+- `POST /api/knowledge/documents`: Ingest structured travel documents with metadata.
+- `POST /api/knowledge/articles`: Ingest raw travel articles into vector space.
+- `POST /api/knowledge/upload`: Multi-part manual file upload (`.pdf`, `.json`, `.txt`, `.md`).
+- `POST /api/knowledge/preload`: Preload default datasets from classpath.
+- `GET /api/knowledge/status`: Check vector store ingestion statistics per destination.
+- `GET /api/knowledge/similarity-search?query=...&topK=...`: Test vector store similarity retrieval.
+
+> For complete payload schemas, curl examples, and ingestion options, see [`docs/EMBEDDINGS.md`](../docs/EMBEDDINGS.md#5-document-ingestion--knowledge-api-guide).
 
 ## Features
 

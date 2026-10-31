@@ -108,6 +108,9 @@ Switching embedding models requires **zero code changes or recompilation**. Foll
    export OLLAMA_BASE_URL=http://localhost:11434
    ```
 
+> [!TIP]
+> **WSL2 Note**: To use Ollama from WSL2 without network bridging issues, install Ollama directly in WSL2 (`curl -fsSL https://ollama.com/install.sh | sh`)—it uses your NVIDIA GPU automatically and works on `localhost:11434`. Alternatively, set `networkingMode=mirrored` in `~/.wslconfig` on Windows.
+
 ### Recipe 2: High-Performance OSS Model with HuggingFace TEI (`Qwen3-Embedding-0.6B`)
 
 1. **Launch HuggingFace Text Embeddings Inference (TEI) container:**
@@ -135,7 +138,12 @@ export GEMINI_API_KEY=your_gemini_api_key
 
 ## 5. Document Ingestion & Knowledge API Guide
 
-The backend provides four flexible ingestion pathways to load travel knowledge into the active `pgvector` store. All ingestion methods feature **deterministic deduplication** (idempotent SHA-256 UUIDs) to prevent duplicate vector rows.
+The system provides flexible ingestion pathways to load travel knowledge into the active `pgvector` store. All ingestion methods feature **deterministic deduplication** (idempotent SHA-256 UUIDs) to prevent duplicate vector rows.
+
+> [!TIP]
+> **Web UI Ingestion**: If you prefer managing documents and testing similarity search through the browser UI rather than `curl`, see the [Knowledge Base UI Walkthrough](../GUIDE.md#b-using-the-knowledge-base-rag).
+
+The backend REST endpoints can also be triggered directly:
 
 ### A. Ingest Structured Travel Documents (`POST /api/knowledge/documents`)
 

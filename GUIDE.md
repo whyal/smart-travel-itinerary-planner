@@ -166,6 +166,8 @@ Because the new model writes to a brand new table, that table is initially empty
 
 > [!TIP]
 > **Switching Back is Instant**: If you switch back to `google`, all your previous Gemini vectors are still waiting in `vector_store_google_3072`—nothing was lost!
+>
+> For deep technical architecture, HuggingFace TEI recipes, and programmatic REST endpoints, see [`docs/EMBEDDINGS.md`](docs/EMBEDDINGS.md).
 
 ---
 
@@ -190,4 +192,4 @@ If you prefer editing configuration files instead of exporting terminal variable
 **A**: You have a local PostgreSQL server already running. Either stop your local PostgreSQL (`sudo service postgresql stop`) or change the host port in `docker-compose.yml` to `"5433:5432"`.
 
 #### Q: Ollama says `connection refused`?
-**A**: Make sure the Ollama app or daemon is running in the background (`ollama serve`).
+**A**: Make sure Ollama is running (`ollama serve`). In WSL2, install Ollama directly inside WSL2 (`curl -fsSL https://ollama.com/install.sh | sh`) for direct `localhost:11434` access with GPU support.
