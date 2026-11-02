@@ -2,8 +2,6 @@
 
 This document defines the architectural rules, coding standards, and system invariants for any AI agent or developer working on the **Next.js 16 (React 19) Frontend**.
 
----
-
 ## 1. System Scope & Identity
 
 The frontend client provides an interactive, real-time travel planning interface with SSE streaming chunk parsing, structured day plans, client-side history, and optional database persistence.
@@ -21,8 +19,6 @@ The frontend client provides an interactive, real-time travel planning interface
 | **Data Types** | [`app/types/itinerary.ts`](app/types/itinerary.ts) | Core TypeScript interfaces aligned with backend Java records. |
 | **History Utilities** | [`app/utils/historyStorage.ts`](app/utils/historyStorage.ts) | LocalStorage CRUD operations for itinerary history. |
 | **Global Typography** | [`app/lib/fonts.ts`](app/lib/fonts.ts) & [`app/globals.css`](app/globals.css) | Google Fonts (`font-display`, `font-body`, `font-mono`) and Tailwind v4 theme. |
-
----
 
 ## 2. Hard Boundaries & Invariants (MUST FOLLOW)
 
@@ -43,8 +39,6 @@ The frontend client provides an interactive, real-time travel planning interface
 - **DO NOT trigger synchronous state updates in `useEffect`**: Prevent cascading render loops.
 - **DO NOT duplicate Save buttons**: Ensure save-to-database actions are centralized in [`ItineraryOutputView`](app/components/itinerary/ItineraryOutputView.tsx) and [`ItineraryHistory`](app/components/ItineraryHistory.tsx).
 - **DO NOT hardcode API URLs in components**: Always use [`itineraryApi.ts`](app/services/itineraryApi.ts) or the centralized environment variable.
-
----
 
 ## 3. Verification & Validation Commands
 

@@ -2,8 +2,6 @@
 
 This document defines the architectural rules, coding standards, and system invariants for any AI agent or developer working on the **Spring Boot 4 + Spring AI 2.0 Backend**.
 
----
-
 ## 1. System Scope & Identity
 
 The backend is a reactive and RESTful travel itinerary service integrating Spring AI, PostgreSQL `pgvector`, and multi-turn chat memory advisors.
@@ -21,8 +19,6 @@ The backend is a reactive and RESTful travel itinerary service integrating Sprin
 | **Global Error Handling** | [`GlobalExceptionHandler`](src/main/java/com/yonglun/itineraryassistant/controller/GlobalExceptionHandler.java) | Uniform REST API error responses (`ApiErrorResponse`). |
 | **Application Config** | [`application.yaml`](src/main/resources/application.yaml) | Base datasource, model, and provider configuration. |
 
----
-
 ## 2. Hard Boundaries & Invariants (MUST FOLLOW)
 
 ### ✅ Architectural Requirements (DO)
@@ -36,8 +32,6 @@ The backend is a reactive and RESTful travel itinerary service integrating Sprin
 - **DO NOT hardcode database tables**: Never write raw table names like `"vector_store"` in queries; always use `EmbeddingProperties`.
 - **DO NOT break SSE Streaming Protocol**: SSE endpoints must produce `MediaType.TEXT_EVENT_STREAM_VALUE` and return raw string chunks without Markdown code block wrappers (` ```json `).
 - **DO NOT create circular dependencies**: Controllers $\rightarrow$ Services $\rightarrow$ Repositories/VectorStore. Never inject controllers into services.
-
----
 
 ## 3. Embedding Model Switching Recipes (Zero Code Changes)
 
@@ -66,8 +60,6 @@ export EMBEDDING_MODEL=gemini-embedding-001
 export EMBEDDING_DIMENSIONS=3072
 export GEMINI_API_KEY=your_gemini_api_key
 ```
-
----
 
 ## 4. Verification & Testing
 

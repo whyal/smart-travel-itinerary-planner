@@ -4,8 +4,6 @@ Welcome! This repository is the **AI Travel Itinerary Planner**, a full-stack ap
 
 This document serves as the universal, agent-agnostic entrypoint for any AI coding assistant or model (e.g. Gemini, Claude, GPT, DeepSeek, Qwen, Llama, Cursor, Copilot, Antigravity, Aider).
 
----
-
 ## 1. System Architecture & Subsystem Index
 
 ```
@@ -22,8 +20,6 @@ When working on specific subsystems, strictly adhere to the domain boundary file
 - **Frontend Guidelines & Invariants**: [`frontend/AGENTS.md`](frontend/AGENTS.md)
 - **Modular Embedding Architecture**: [`docs/EMBEDDINGS.md`](docs/EMBEDDINGS.md)
 
----
-
 ## 2. Universal Hard Boundaries (Non-Negotiables)
 
 All AI agents and models working on this codebase **MUST** follow these invariants:
@@ -39,8 +35,8 @@ All AI agents and models working on this codebase **MUST** follow these invarian
 4. ✅ **Preserve Established Architecture & Conventions**:
    - Respect Spring Boot dependency injection and configuration properties.
    - Respect React Server Components vs. Client Components conventions in Next.js 16.
-
----
+5. 🚫 **No Horizontal Dividers (`---`) in Documents**:
+   - Never use `---` or thematic break lines in Markdown files, documentation, or responses. Structure content using clear heading hierarchies and whitespace.
 
 ## 3. Standard Verification Commands
 
@@ -52,8 +48,6 @@ Any agent modifying code must execute and verify the respective test suites:
 | **Frontend Tests** | `npm test` (from `/frontend`) | Runs Jest unit and component tests. |
 | **Frontend Build** | `npm run build` (from `/frontend`) | Validates TypeScript types and Next.js bundle compilation. |
 | **Frontend Lint** | `npm run lint` (from `/frontend`) | Validates ESLint rules. |
-
----
 
 ## 4. Model Switching & Embedding Invariants
 - The system supports hot-swapping embedding models (Google Gemini, Ollama OSS `Qwen3-Embedding-0.6B`, OpenAI-compatible/TEI) without application code changes.
