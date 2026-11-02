@@ -10,15 +10,17 @@ This document serves as the universal, agent-agnostic entrypoint for any AI codi
 smart-travel-itinerary-planner/
 ├── backend/          # Spring Boot 4 + Spring AI 2.0 (Java 21)
 ├── frontend/         # Next.js 16 App Router + React 19 + Tailwind CSS v4 (TypeScript)
-├── docs/             # System documentation (e.g. EMBEDDINGS.md)
+├── docs/             # Central documentation (QUICKSTART.md, EMBEDDINGS.md, API.md)
 └── AGENTS.md         # Root instruction and boundary definition
 ```
 
-### Module Navigation
+### Module & Documentation Navigation
 When working on specific subsystems, strictly adhere to the domain boundary files:
 - **Backend Guidelines & Invariants**: [`backend/AGENTS.md`](backend/AGENTS.md)
 - **Frontend Guidelines & Invariants**: [`frontend/AGENTS.md`](frontend/AGENTS.md)
+- **Quickstart & Operator Runbook**: [`docs/QUICKSTART.md`](docs/QUICKSTART.md)
 - **Modular Embedding Architecture**: [`docs/EMBEDDINGS.md`](docs/EMBEDDINGS.md)
+- **REST & SSE API Reference**: [`docs/API.md`](docs/API.md)
 
 ## 2. Universal Hard Boundaries (Non-Negotiables)
 

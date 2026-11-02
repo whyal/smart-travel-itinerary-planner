@@ -141,7 +141,7 @@ export GEMINI_API_KEY=your_gemini_api_key
 The system provides flexible ingestion pathways to load travel knowledge into the active `pgvector` store. All ingestion methods feature **deterministic deduplication** (idempotent SHA-256 UUIDs) to prevent duplicate vector rows.
 
 > [!TIP]
-> **Web UI Ingestion**: If you prefer managing documents and testing similarity search through the browser UI rather than `curl`, see the [Knowledge Base UI Walkthrough](../GUIDE.md#b-using-the-knowledge-base-rag).
+> **Web UI Ingestion**: If you prefer managing documents and testing similarity search through the browser UI rather than `curl`, see the [Knowledge Base UI Walkthrough](QUICKSTART.md#b-using-the-knowledge-base-rag).
 
 The backend REST endpoints can also be triggered directly:
 

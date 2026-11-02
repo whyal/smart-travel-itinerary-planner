@@ -147,7 +147,7 @@ Because the new model writes to a brand new table, that table is initially empty
 > [!TIP]
 > **Switching Back is Instant**: If you switch back to `google`, all your previous Gemini vectors are still waiting in `vector_store_google_3072`—nothing was lost!
 >
-> For deep technical architecture, HuggingFace TEI recipes, and programmatic REST endpoints, see [`docs/EMBEDDINGS.md`](docs/EMBEDDINGS.md).
+> For deep technical architecture, HuggingFace TEI recipes, and programmatic REST endpoints, see [`EMBEDDINGS.md`](EMBEDDINGS.md).
 
 ## 4. Key Configuration Files Reference
 
@@ -155,9 +155,9 @@ If you prefer editing configuration files instead of exporting terminal variable
 
 | File | Purpose |
 | :--- | :--- |
-| [`backend/src/main/resources/application.yaml`](backend/src/main/resources/application.yaml) | Main backend configuration where default model, dimensions, and URLs are set. |
-| [`backend/.env`](backend/.env) | Local database credentials and API keys. |
-| [`frontend/app/services/itineraryApi.ts`](frontend/app/services/itineraryApi.ts) | Frontend API connection (defaults to `http://localhost:8080/api`). |
+| [`backend/src/main/resources/application.yaml`](../backend/src/main/resources/application.yaml) | Main backend configuration where default model, dimensions, and URLs are set. |
+| [`backend/.env`](../backend/.env) | Local database credentials and API keys. |
+| [`frontend/app/services/itineraryApi.ts`](../frontend/app/services/itineraryApi.ts) | Frontend API connection (defaults to `http://localhost:8080/api`). |
 
 ## 5. Troubleshooting & FAQ
 
