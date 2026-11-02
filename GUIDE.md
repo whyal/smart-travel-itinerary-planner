@@ -2,8 +2,6 @@
 
 Welcome! This guide is designed for developers, students, and tech-savvy users who want to run the system, generate AI itineraries, manage travel guides, and **switch embedding models** without headaches.
 
----
-
 ## 1. Quick Start in 3 Steps
 
 ### Prerequisites
@@ -11,8 +9,6 @@ Make sure you have:
 - **Docker Desktop** installed and running
 - **Java 21+** (`java -version`)
 - **Node.js 18+** (`node -v`)
-
----
 
 ### Step 1: Start the Database (PostgreSQL + pgvector)
 
@@ -25,8 +21,6 @@ docker compose up -d
 ```
 
 *(This starts PostgreSQL with the `pgvector` vector database extension on port `5432`.)*
-
----
 
 ### Step 2: Start the Backend (Spring Boot)
 
@@ -44,8 +38,6 @@ export DB_PASSWORD="your_postgres_password"
 
 The backend starts at `http://localhost:8080`.
 
----
-
 ### Step 3: Start the Frontend (Next.js)
 
 In a new terminal window:
@@ -57,8 +49,6 @@ npm run dev
 ```
 
 Open your browser to **`http://localhost:3000`**. You are ready to plan trips!
-
----
 
 ## 2. Using the System
 
@@ -78,8 +68,6 @@ RAG (Retrieval-Augmented Generation) gives the AI factual knowledge from local g
    - **Preload Data**: Click **Preload Knowledge** for *Kyoto* to load bundled datasets instantly.
    - **Test Search**: Type a query (e.g., *"quiet zen gardens"*) to see what matching passages the AI will retrieve and check their similarity scores.
 
----
-
 ## 3. How to Switch Embedding Models (The Foolproof Guide)
 
 ### Why would you switch?
@@ -92,8 +80,6 @@ RAG (Retrieval-Augmented Generation) gives the AI factual knowledge from local g
 > Vectors created by Google Gemini cannot be compared with vectors created by Ollama. 
 > 
 > **How this app protects you**: The system automatically creates a dedicated database table for each model (e.g. `vector_store_google_3072` vs `vector_store_ollama_1024`). Your old data is never overwritten or deleted!
-
----
 
 ### Ready-to-Use Recipes
 
@@ -110,8 +96,6 @@ export GEMINI_API_KEY="your-gemini-key"
 
 ./gradlew bootRun
 ```
-
----
 
 #### Recipe B: Ollama (Free / 100% Offline / Local GPU)
 *Runs locally on your laptop with no API keys or costs.*
@@ -135,8 +119,6 @@ export GEMINI_API_KEY="your-gemini-key"
    ./gradlew bootRun
    ```
 
----
-
 #### Recipe C: OpenAI / OpenAI-Compatible (TEI, vLLM)
 *For OpenAI cloud or self-hosted GPU containers.*
 
@@ -149,8 +131,6 @@ export OPENAI_COMPAT_API_KEY="sk-..."
 
 ./gradlew bootRun
 ```
-
----
 
 ### What to Do Immediately After Switching Models (Cold Start)
 
@@ -169,8 +149,6 @@ Because the new model writes to a brand new table, that table is initially empty
 >
 > For deep technical architecture, HuggingFace TEI recipes, and programmatic REST endpoints, see [`docs/EMBEDDINGS.md`](docs/EMBEDDINGS.md).
 
----
-
 ## 4. Key Configuration Files Reference
 
 If you prefer editing configuration files instead of exporting terminal variables:
@@ -180,8 +158,6 @@ If you prefer editing configuration files instead of exporting terminal variable
 | [`backend/src/main/resources/application.yaml`](backend/src/main/resources/application.yaml) | Main backend configuration where default model, dimensions, and URLs are set. |
 | [`backend/.env`](backend/.env) | Local database credentials and API keys. |
 | [`frontend/app/services/itineraryApi.ts`](frontend/app/services/itineraryApi.ts) | Frontend API connection (defaults to `http://localhost:8080/api`). |
-
----
 
 ## 5. Troubleshooting & FAQ
 
