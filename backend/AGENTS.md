@@ -32,6 +32,7 @@ The backend is a reactive and RESTful travel itinerary service integrating Sprin
 - **DO NOT hardcode database tables**: Never write raw table names like `"vector_store"` in queries; always use `EmbeddingProperties`.
 - **DO NOT break SSE Streaming Protocol**: SSE endpoints must produce `MediaType.TEXT_EVENT_STREAM_VALUE` and return raw string chunks without Markdown code block wrappers (` ```json `).
 - **DO NOT create circular dependencies**: Controllers $\rightarrow$ Services $\rightarrow$ Repositories/VectorStore. Never inject controllers into services.
+- **DO NOT add unnecessary comments in source code**: Code should be self-documenting. Avoid trivial line-by-line comments, obvious step descriptions, or decorative separators unless explaining non-obvious business logic or workarounds.
 
 ## 3. Embedding Model Switching Recipes (Zero Code Changes)
 

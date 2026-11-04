@@ -30,9 +30,7 @@ public class ItineraryService {
         Itinerary raw = chatClient.prompt()
                 .user(prompt)
                 .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, resolveSessionId(conversationId)))
-                .call()
-                // Force Gemini's native API JSON mode so it never outputs conversational text
-                .entity(Itinerary.class, spec -> spec
+                .call()                .entity(Itinerary.class, spec -> spec
                         .useProviderStructuredOutput()
                         .validateSchema()
                 );
@@ -75,9 +73,7 @@ public class ItineraryService {
     }
 
     public Flux<String> streamItinerary(String prompt, String conversationId) {
-        return chatClient.prompt()
-                // Add a strict system rule to prevent markdown fences and reinforce anti-duplication during SSE streaming
-                .system("You are a data API. Output ONLY raw, RFC8259-compliant JSON without markdown code blocks (```json) or introductory text. " +
+        return chatClient.prompt()                .system("You are a data API. Output ONLY raw, RFC8259-compliant JSON without markdown code blocks (```json) or introductory text. " +
                         "Ensure every visited location/attraction is unique across the entire multi-day itinerary (zero duplicate venues across days), " +
                         "cluster activities by district each day, and limit activities to 2 to 4 per day.")
                 .user(userSpec -> userSpec

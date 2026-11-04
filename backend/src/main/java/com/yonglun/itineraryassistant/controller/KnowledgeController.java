@@ -28,11 +28,7 @@ public class KnowledgeController {
         this.embeddingProperties = embeddingProperties;
     }
 
-    /**
-     * Ingest a flat list of structured travel documents.
-     * For batched ingestion with an explicit destination wrapper, use {@link #ingestBatch(DocumentBatchIngestionRequest)}.
-     */
-    @PostMapping(value = "/documents", consumes = MediaType.APPLICATION_JSON_VALUE)
+        @PostMapping(value = "/documents", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<IngestionResponse> ingestDocuments(
             @RequestBody List<TravelDocumentDto> documents,
             @RequestParam(required = false) String destination) {
@@ -55,13 +51,7 @@ public class KnowledgeController {
         ));
     }
 
-    /**
-     * Ingest a batch of structured travel documents with an explicit destination wrapper.
-     * Prefer {@link #ingestDocuments(List, String)} with a {@code ?destination} query param for new integrations.
-     *
-     * @deprecated Use POST /api/knowledge/documents?destination=... instead.
-     */
-    @Deprecated
+        @Deprecated
     @PostMapping(value = "/batch", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<IngestionResponse> ingestBatch(@RequestBody DocumentBatchIngestionRequest request) {
         if (request == null || request.documents() == null || request.documents().isEmpty()) {
@@ -77,11 +67,7 @@ public class KnowledgeController {
         ));
     }
 
-    /**
-     * Ingest raw article text for a destination.
-     * The canonical path is POST /api/knowledge/articles; /custom and /ingest are deprecated aliases.
-     */
-    @PostMapping(value = "/articles", consumes = MediaType.APPLICATION_JSON_VALUE)
+        @PostMapping(value = "/articles", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<IngestionResponse> ingestArticles(@RequestBody CustomIngestionRequest request) {
         if (request == null || request.articles() == null || request.articles().isEmpty()) {
             return ResponseEntity.badRequest().body(new IngestionResponse(

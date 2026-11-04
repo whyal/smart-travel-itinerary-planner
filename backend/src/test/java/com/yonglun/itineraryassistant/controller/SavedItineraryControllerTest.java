@@ -99,12 +99,10 @@ class SavedItineraryControllerTest {
         when(service.getAllSavedItineraries()).thenReturn(List.of(res1, res2));
         when(service.getSavedItinerariesByConversationId(eq("session-1"))).thenReturn(List.of(res1));
 
-        // Get all
         mockMvc.perform(get("/api/itineraries"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)));
 
-        // Filter by session-1
         mockMvc.perform(get("/api/itineraries").param("conversationId", "session-1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))

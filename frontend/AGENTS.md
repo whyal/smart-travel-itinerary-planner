@@ -39,6 +39,7 @@ The frontend client provides an interactive, real-time travel planning interface
 - **DO NOT trigger synchronous state updates in `useEffect`**: Prevent cascading render loops.
 - **DO NOT duplicate Save buttons**: Ensure save-to-database actions are centralized in [`ItineraryOutputView`](app/components/itinerary/ItineraryOutputView.tsx) and [`ItineraryHistory`](app/components/ItineraryHistory.tsx).
 - **DO NOT hardcode API URLs in components**: Always use [`itineraryApi.ts`](app/services/itineraryApi.ts) or the centralized environment variable.
+- **DO NOT add unnecessary comments in source code**: Code should be self-documenting. Avoid trivial inline comments, play-by-play notes, or redundant JSDoc unless explaining complex workarounds or essential caveats.
 
 ## 3. Verification & Validation Commands
 

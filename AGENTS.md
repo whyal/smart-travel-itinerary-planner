@@ -39,6 +39,8 @@ All AI agents and models working on this codebase **MUST** follow these invarian
    - Respect React Server Components vs. Client Components conventions in Next.js 16.
 5. 🚫 **No Horizontal Dividers (`---`) in Documents**:
    - Never use `---` or thematic break lines in Markdown files, documentation, or responses. Structure content using clear heading hierarchies and whitespace.
+6. 🚫 **No Unnecessary Comments in Source Code**:
+   - Do not add unnecessary comments in the source code unless absolutely necessary. Code should be self-documenting; only retain or add comments for non-obvious business logic, complex workarounds, or essential domain caveats.
 
 ## 3. Standard Verification Commands
 

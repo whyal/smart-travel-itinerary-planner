@@ -70,7 +70,6 @@ class ItineraryServiceTest {
         Itinerary.Activity act2 = new Itinerary.Activity("Afternoon", "Kiyomizu-dera", "Historic wooden temple");
         Itinerary.DayPlan day1 = new Itinerary.DayPlan(1, "Southern & Eastern Kyoto", List.of(act1, act2));
 
-        // Day 2 mistakenly contains Fushimi Inari Taisha again (duplicate location)
         Itinerary.Activity act3 = new Itinerary.Activity("Morning", "fushimi inari taisha ", "Torii path again");
         Itinerary.Activity act4 = new Itinerary.Activity("Afternoon", "Arashiyama Bamboo Grove", "Walk the grove");
         Itinerary.DayPlan day2 = new Itinerary.DayPlan(2, "Western Kyoto", List.of(act3, act4));
@@ -81,11 +80,7 @@ class ItineraryServiceTest {
 
         assertThat(sanitized).isNotNull();
         assertThat(sanitized.days()).hasSize(2);
-
-        // Day 1 has both activities
         assertThat(sanitized.days().get(0).activities()).hasSize(2);
-
-        // Day 2 has duplicate act3 removed, leaving only act4
         assertThat(sanitized.days().get(1).activities()).hasSize(1);
         assertThat(sanitized.days().get(1).activities().get(0).location()).isEqualTo("Arashiyama Bamboo Grove");
     }

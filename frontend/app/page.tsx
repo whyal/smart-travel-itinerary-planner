@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import ItineraryForm from "./components/ItineraryForm";
 
-// Server Components support built-in SEO metadata natively
 export const metadata: Metadata = {
   title: "AI Travel Planner | Spring AI & Next.js",
   description:

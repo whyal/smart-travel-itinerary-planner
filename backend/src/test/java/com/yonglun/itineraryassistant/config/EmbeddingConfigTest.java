@@ -32,10 +32,7 @@ class EmbeddingConfigTest {
 
         props.setProvider("openai-compatible");
         props.setDimensions(1024);
-        assertThat(props.getEffectiveTableName()).isEqualTo("vector_store_openai_compatible_1024");
-
-        // Custom explicit table name
-        props.setTableName("custom_travel_vectors");
+        assertThat(props.getEffectiveTableName()).isEqualTo("vector_store_openai_compatible_1024");        props.setTableName("custom_travel_vectors");
         assertThat(props.getEffectiveTableName()).isEqualTo("custom_travel_vectors");
     }
 

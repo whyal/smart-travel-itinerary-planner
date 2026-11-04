@@ -38,22 +38,18 @@ export default function ItineraryForm() {
   const [error, setError] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string>("");
   const [activeTab, setActiveTab] = useState<"structured" | "raw">(
-    "structured"
+    "structured",
   );
   const [selectedDayFilter, setSelectedDayFilter] = useState<number | "all">(
-    "all"
+    "all",
   );
   const [historyList, setHistoryList] = useState<SavedItineraryItem[]>([]);
-
-  // Database Save States & Settings
   const [saveToDbStatus, setSaveToDbStatus] = useState<SaveToDbStatus>("idle");
   const [saveToDbMessage, setSaveToDbMessage] = useState<string | null>(null);
   const [autoSaveToDb, setAutoSaveToDb] = useState<boolean>(false);
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const streamEndRef = useRef<HTMLDivElement | null>(null);
-
-  // Restore session and past history from localStorage after mounting (hydration-safe)
   useEffect(() => {
     queueMicrotask(() => {
       let savedId = localStorage.getItem("itinerary_conversation_id");
@@ -76,7 +72,7 @@ export default function ItineraryForm() {
           if (!savedItinerary && savedText) {
             savedItinerary = parseItineraryFromText(
               savedText,
-              savedForm.destination
+              savedForm.destination,
             );
           }
 
@@ -102,7 +98,6 @@ export default function ItineraryForm() {
     });
   }, []);
 
-  // Auto-scroll streaming log container as new text streams in
   useEffect(() => {
     if (loading && streamEndRef.current) {
       streamEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -190,8 +185,6 @@ export default function ItineraryForm() {
       throw new Error("Failed to save itinerary to database.");
     }
   };
-
-  // Helper to persist current session output to localStorage
   const saveSessionCache = (
     newItinerary: ItineraryResponse | null,
     newStreamedText: string,
@@ -279,8 +272,6 @@ Generate a ${formData.days}-day itinerary matching these constraints.`;
         (chunk) => {
           accumulatedText += chunk;
           setStreamedText(accumulatedText);
-
-          // Attempt soft itinerary parse while streaming
           const streamedParsed = parseItineraryFromText(
             accumulatedText,
             formData.destination,
@@ -291,8 +282,6 @@ Generate a ${formData.days}-day itinerary matching these constraints.`;
           }
         },
       );
-
-      // Final attempt to parse complete itinerary
       const finalParsed = parseItineraryFromText(
         accumulatedText,
         formData.destination,
@@ -301,8 +290,6 @@ Generate a ${formData.days}-day itinerary matching these constraints.`;
         setItinerary(finalParsed);
         finalParsedItinerary = finalParsed;
       }
-
-      // Persist results in localStorage
       saveSessionCache(
         finalParsedItinerary,
         accumulatedText,
@@ -319,8 +306,6 @@ Generate a ${formData.days}-day itinerary matching these constraints.`;
         };
         const updatedHistory = saveToHistory(newItem);
         setHistoryList(updatedHistory);
-
-        // Optionally auto-save to backend database if enabled
         if (autoSaveToDb) {
           handleSaveToDatabase(
             finalParsedItinerary,

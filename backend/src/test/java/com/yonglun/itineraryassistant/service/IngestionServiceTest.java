@@ -278,7 +278,6 @@ class IngestionServiceTest {
 
             assertThat(firstGeneratedId).isNotBlank();
 
-            // Re-ingest the exact same document
             ingestionService.ingestDocuments(List.of(docWithoutId), "Kyoto");
 
             verify(vectorStore, times(2)).add(documentsCaptor.capture());

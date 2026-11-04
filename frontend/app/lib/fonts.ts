@@ -1,6 +1,5 @@
 import { Fraunces, Inter, IBM_Plex_Mono } from "next/font/google";
 
-// Display face — editorial, travel-poster character for headlines
 export const fraunces = Fraunces({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
@@ -9,7 +8,6 @@ export const fraunces = Fraunces({
   display: "swap",
 });
 
-// Body face — clean, quiet, gets out of the way
 export const inter = Inter({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
@@ -17,7 +15,6 @@ export const inter = Inter({
   display: "swap",
 });
 
-// Utility face — for timestamps, day labels, ticket-stub codes
 export const plexMono = IBM_Plex_Mono({
   subsets: ["latin"],
   weight: ["400", "500"],

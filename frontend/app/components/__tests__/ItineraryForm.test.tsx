@@ -2,14 +2,10 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ItineraryForm from "../ItineraryForm";
 import * as itineraryApi from "../../services/itineraryApi";
-
-// Mock API service module
 jest.mock("../../services/itineraryApi", () => ({
   ...jest.requireActual("../../services/itineraryApi"),
   saveItineraryToDatabase: jest.fn(),
 }));
-
-// Helper to construct SSE stream reader
 function createMockStreamReader(chunks: string[]) {
   const encoder = new TextEncoder();
   let index = 0;
@@ -42,11 +38,17 @@ describe("ItineraryForm Component", () => {
     it("renders initial form fields with default values", () => {
       render(<ItineraryForm />);
 
-      const destinationInput = screen.getByLabelText(/destination/i) as HTMLInputElement;
+      const destinationInput = screen.getByLabelText(
+        /destination/i,
+      ) as HTMLInputElement;
       const daysInput = screen.getByLabelText(/days/i) as HTMLInputElement;
       const paceSelect = screen.getByLabelText(/pace/i) as HTMLSelectElement;
-      const interestsInput = screen.getByLabelText(/interests/i) as HTMLInputElement;
-      const budgetSelect = screen.getByLabelText(/budget/i) as HTMLSelectElement;
+      const interestsInput = screen.getByLabelText(
+        /interests/i,
+      ) as HTMLInputElement;
+      const budgetSelect = screen.getByLabelText(
+        /budget/i,
+      ) as HTMLSelectElement;
 
       expect(destinationInput.value).toBe("Osaka");
       expect(daysInput.value).toBe("3");
@@ -81,9 +83,13 @@ describe("ItineraryForm Component", () => {
       const user = userEvent.setup();
 
       const sampleSseChunk1 = "data: Day 1: Kyoto Exploration\n";
-      const sampleSseChunk2 = "data: (9:00 AM) Kinkaku-ji Temple - Visit Golden Pavilion\n";
+      const sampleSseChunk2 =
+        "data: (9:00 AM) Kinkaku-ji Temple - Visit Golden Pavilion\n";
 
-      const mockReader = createMockStreamReader([sampleSseChunk1, sampleSseChunk2]);
+      const mockReader = createMockStreamReader([
+        sampleSseChunk1,
+        sampleSseChunk2,
+      ]);
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         body: { getReader: () => mockReader },
@@ -96,8 +102,6 @@ describe("ItineraryForm Component", () => {
       });
 
       await user.click(submitButton);
-
-      // Verify POST call was made with formatted payload
       expect(global.fetch).toHaveBeenCalledWith(
         "http://localhost:8080/api/itinerary/stream",
         expect.objectContaining({
@@ -106,17 +110,17 @@ describe("ItineraryForm Component", () => {
             "Content-Type": "application/json",
           }),
           body: expect.stringContaining("Destination: Osaka"),
-        })
+        }),
       );
-
-      // Wait for stream to be processed
       await waitFor(() => {
         expect(screen.getByText(/Kinkaku-ji Temple/i)).toBeInTheDocument();
       });
     });
 
     it("handles server HTTP error response during form submit", async () => {
-      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+      const consoleErrorSpy = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
       const user = userEvent.setup();
 
       (global.fetch as jest.Mock).mockResolvedValueOnce({
@@ -135,7 +139,7 @@ describe("ItineraryForm Component", () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText(/Server returned HTTP 500: Internal Server Error/i)
+          screen.getByText(/Server returned HTTP 500: Internal Server Error/i),
         ).toBeInTheDocument();
       });
 
@@ -143,10 +147,14 @@ describe("ItineraryForm Component", () => {
     });
 
     it("handles network failure during submission", async () => {
-      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+      const consoleErrorSpy = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
       const user = userEvent.setup();
 
-      (global.fetch as jest.Mock).mockRejectedValueOnce(new Error("Failed to fetch"));
+      (global.fetch as jest.Mock).mockRejectedValueOnce(
+        new Error("Failed to fetch"),
+      );
 
       render(<ItineraryForm />);
 
@@ -191,17 +199,15 @@ describe("ItineraryForm Component", () => {
         body: { getReader: () => mockReader },
       });
 
-      (itineraryApi.saveItineraryToDatabase as jest.Mock).mockResolvedValueOnce(undefined);
+      (itineraryApi.saveItineraryToDatabase as jest.Mock).mockResolvedValueOnce(
+        undefined,
+      );
 
       render(<ItineraryForm />);
-
-      // Enable auto-save checkbox
       const autoSaveCheckbox = screen.getByRole("checkbox", {
         name: /auto-save generated itinerary/i,
       });
       await user.click(autoSaveCheckbox);
-
-      // Submit form
       const submitButton = screen.getByRole("button", {
         name: /generate streamed itinerary/i,
       });
@@ -212,17 +218,21 @@ describe("ItineraryForm Component", () => {
           expect.objectContaining({
             destination: "Osaka",
             daysCount: 1,
-          })
+          }),
         );
       });
 
       expect(
-        await screen.findByText(/Itinerary successfully saved to Spring Boot backend database!/i)
+        await screen.findByText(
+          /Itinerary successfully saved to Spring Boot backend database!/i,
+        ),
       ).toBeInTheDocument();
     });
 
     it("displays error message if auto-save to database fails", async () => {
-      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+      const consoleErrorSpy = jest
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
       const user = userEvent.setup();
 
       const jsonItinerary = JSON.stringify({
@@ -232,7 +242,11 @@ describe("ItineraryForm Component", () => {
             dayNumber: 1,
             theme: "Sightseeing",
             activities: [
-              { time: "9:00 AM", location: "Osaka Castle", description: "Visit castle" },
+              {
+                time: "9:00 AM",
+                location: "Osaka Castle",
+                description: "Visit castle",
+              },
             ],
           },
         ],
@@ -245,7 +259,7 @@ describe("ItineraryForm Component", () => {
       });
 
       (itineraryApi.saveItineraryToDatabase as jest.Mock).mockRejectedValueOnce(
-        new Error("Database connection refused")
+        new Error("Database connection refused"),
       );
 
       render(<ItineraryForm />);
@@ -262,7 +276,9 @@ describe("ItineraryForm Component", () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText(/Database Save Failed: Database connection refused/i)
+          screen.getByText(
+            /Database Save Failed: Database connection refused/i,
+          ),
         ).toBeInTheDocument();
       });
 
@@ -271,8 +287,6 @@ describe("ItineraryForm Component", () => {
 
     it("saves a past itinerary to database from Past Itineraries drawer when Save to DB button is clicked", async () => {
       const user = userEvent.setup();
-
-      // Seed localStorage with a past itinerary item
       const pastItem = {
         id: "past-session-123",
         createdAt: Date.now() - 10000,
@@ -290,42 +304,43 @@ describe("ItineraryForm Component", () => {
               dayNumber: 1,
               theme: "Temples",
               activities: [
-                { time: "10:00 AM", location: "Senso-ji", description: "Visit temple" },
+                {
+                  time: "10:00 AM",
+                  location: "Senso-ji",
+                  description: "Visit temple",
+                },
               ],
             },
           ],
         },
         streamedText: "Day 1: Temples",
       };
-      localStorage.setItem("itinerary_history_list", JSON.stringify([pastItem]));
+      localStorage.setItem(
+        "itinerary_history_list",
+        JSON.stringify([pastItem]),
+      );
 
-      (itineraryApi.saveItineraryToDatabase as jest.Mock).mockResolvedValueOnce(undefined);
+      (itineraryApi.saveItineraryToDatabase as jest.Mock).mockResolvedValueOnce(
+        undefined,
+      );
 
       render(<ItineraryForm />);
-
-      // Open Past Itineraries drawer
-      const historyBtn = screen.getByRole("button", { name: /past itineraries/i });
+      const historyBtn = screen.getByRole("button", {
+        name: /past itineraries/i,
+      });
       await user.click(historyBtn);
-
-      // Verify the past item is visible in drawer
       expect(screen.getByText("Tokyo")).toBeInTheDocument();
-
-      // Click "Save to DB" button inside drawer for the item
       const saveDbBtns = screen.getAllByRole("button", { name: /save to db/i });
       await user.click(saveDbBtns[0]);
-
-      // Verify API was called with the past item payload
       await waitFor(() => {
         expect(itineraryApi.saveItineraryToDatabase).toHaveBeenCalledWith(
           expect.objectContaining({
             conversationId: "past-session-123",
             destination: "Tokyo",
             daysCount: 1,
-          })
+          }),
         );
       });
-
-      // Verify UI changes to "Saved to DB"
       const savedBadges = await screen.findAllByText(/saved to db/i);
       expect(savedBadges.length).toBeGreaterThan(0);
     });
@@ -334,8 +349,6 @@ describe("ItineraryForm Component", () => {
   describe("Session Reset & Stop Generation Handlers", () => {
     it("stops stream generation when user clicks Stop Generation", async () => {
       const user = userEvent.setup();
-
-      // Create a reader that never completes immediately
       const mockReader = {
         read: jest.fn().mockReturnValue(new Promise(() => {})), // Hangs indefinitely
       };
@@ -351,19 +364,15 @@ describe("ItineraryForm Component", () => {
         name: /generate streamed itinerary/i,
       });
       await user.click(submitButton);
-
-      // The button text changes to "Stop Generation" while loading
       const stopButton = await screen.findByRole("button", {
         name: /stop generation/i,
       });
       expect(stopButton).toBeInTheDocument();
 
       await user.click(stopButton);
-
-      // Verify that after stopping, the form returns to non-loading state
       await waitFor(() => {
         expect(
-          screen.getByRole("button", { name: /generate streamed itinerary/i })
+          screen.getByRole("button", { name: /generate streamed itinerary/i }),
         ).toBeInTheDocument();
       });
     });
@@ -372,10 +381,10 @@ describe("ItineraryForm Component", () => {
       const user = userEvent.setup();
       render(<ItineraryForm />);
 
-      const newSessionBtn = screen.getByRole("button", { name: /new session/i });
+      const newSessionBtn = screen.getByRole("button", {
+        name: /new session/i,
+      });
       await user.click(newSessionBtn);
-
-      // Verify localStorage is initialized with new conversation ID
       expect(localStorage.getItem("itinerary_conversation_id")).toBeTruthy();
     });
   });

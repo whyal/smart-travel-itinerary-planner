@@ -13,20 +13,10 @@ import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-/**
- * Verifies that {@link GlobalExceptionHandler} returns the standardized
- * {@link com.yonglun.itineraryassistant.dto.ApiErrorResponse} envelope for
- * each handled exception type.
- *
- * <p>A minimal stub controller is registered alongside the advice so that
- * MockMvc can trigger real exception paths without spinning up a full
- * Spring application context.
- */
 @ExtendWith(MockitoExtension.class)
 class GlobalExceptionHandlerTest {
 
-    /** Minimal stub controller that throws on demand, used only in this test. */
-    @RestController
+        @RestController
     @RequestMapping("/test")
     static class StubController {
 

@@ -8,13 +8,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 
-/**
- * REST controller for itinerary generation and streaming.
- *
- * <p>The canonical base path is {@code /api/itineraries}.
- * The legacy path {@code /api/itinerary} (singular) is retained as a deprecated alias for
- * backwards compatibility and should be removed in a future release.
- */
 @RestController
 @RequestMapping({"/api/itineraries", "/api/itinerary"})
 public class ItineraryController {
@@ -24,10 +17,7 @@ public class ItineraryController {
         this.itineraryService = itineraryService;
     }
 
-    /**
-     * Standard synchronous JSON endpoint
-     */
-    @PostMapping("/generate")
+        @PostMapping("/generate")
     public ResponseEntity<Itinerary> generateItinerary(@RequestBody PromptRequest request) {
         Itinerary itinerary = itineraryService.generateItinerary(
                 request.prompt(),
@@ -36,10 +26,7 @@ public class ItineraryController {
         return ResponseEntity.ok(itinerary);
     }
 
-    /**
-     * Server-Sent Events (SSE) streaming endpoint
-     */
-    @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+        @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> streamItinerary(@RequestBody PromptRequest request) {
         return itineraryService.streamItinerary(
                 request.prompt(),

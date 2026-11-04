@@ -13,10 +13,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
-/**
- * Modular Embedding Model Factory.
- * Selects and instantiates the appropriate EmbeddingModel based on app.embedding.provider.
- */
 @Configuration
 public class EmbeddingConfig {
 

@@ -55,7 +55,10 @@ describe("itineraryParser", () => {
         },
       };
 
-      const unwrapped = unwrapItineraryObject(wrapped) as Record<string, unknown>;
+      const unwrapped = unwrapItineraryObject(wrapped) as Record<
+        string,
+        unknown
+      >;
       expect(unwrapped.destination).toBe("Kyoto");
       expect(isValidItinerary(wrapped)).toBe(true);
     });
@@ -80,7 +83,7 @@ describe("itineraryParser", () => {
       expect(normalized.days.length).toBe(1);
       expect(normalized.days[0].dayNumber).toBe(1);
       expect(normalized.days[0].activities[0].description).toBe(
-        "Visit the Eiffel Tower in the morning and Louvre in afternoon"
+        "Visit the Eiffel Tower in the morning and Louvre in afternoon",
       );
     });
 
@@ -137,15 +140,13 @@ describe("itineraryParser", () => {
       expect(result).not.toBeNull();
       expect(result?.destination).toBe("Kyoto");
       expect(result?.days.length).toBe(2);
-
-      // Day 1 Checks
       expect(result?.days[0].dayNumber).toBe(1);
       expect(result?.days[0].theme).toBe("Arashiyama Bamboo & Monkeys");
       expect(result?.days[0].activities.length).toBe(4);
       expect(result?.days[0].activities[0].time).toBe("09:00 AM");
-      expect(result?.days[0].activities[0].location).toBe("Arashiyama Bamboo Grove");
-
-      // Day 2 Checks
+      expect(result?.days[0].activities[0].location).toBe(
+        "Arashiyama Bamboo Grove",
+      );
       expect(result?.days[1].dayNumber).toBe(2);
       expect(result?.days[1].theme).toBe("Historic Temples & Gion");
       expect(result?.days[1].activities.length).toBe(3);
@@ -163,7 +164,9 @@ Day 1: London Highlights
       const result = parseMarkdownItinerary(markdown, "London");
       expect(result).not.toBeNull();
       expect(result?.days[0].activities.length).toBe(1);
-      expect(result?.days[0].activities[0].description).toContain("Rosetta Stone");
+      expect(result?.days[0].activities[0].description).toContain(
+        "Rosetta Stone",
+      );
     });
   });
 
@@ -212,7 +215,9 @@ Hope you have a fantastic trip!
       expect(result).not.toBeNull();
       expect(result?.destination).toBe("Seoul");
       expect(result?.days.length).toBe(1);
-      expect(result?.days[0].activities[0].location).toBe("Gyeongbokgung Palace");
+      expect(result?.days[0].activities[0].location).toBe(
+        "Gyeongbokgung Palace",
+      );
     });
 
     it("extracts JSON array embedded inside conversational text", () => {
@@ -257,7 +262,9 @@ Let me know if you need modifications!
       const parsed = parseItineraryFromText(rawJsonInput, "Tokyo");
       expect(parsed).not.toBeNull();
       expect(parsed?.destination).toBe("Tokyo");
-      expect(parsed?.days[0].activities[2].location).toBe("Ginza Traditional Teahouse");
+      expect(parsed?.days[0].activities[2].location).toBe(
+        "Ginza Traditional Teahouse",
+      );
     });
 
     it("uses fallback generator for unstructured text responses", () => {
@@ -275,4 +282,3 @@ Finish with a dinner in Malá Strana and enjoy Czech beer.
     });
   });
 });
-

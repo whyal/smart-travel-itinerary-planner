@@ -9,10 +9,6 @@ function cleanStringValue(val: unknown): string {
     .trim();
 }
 
-/**
- * Sanitizes JSON string payloads by escaping unescaped control characters (such as raw linebreaks)
- * inside double-quoted string literals so that JSON.parse can process them successfully.
- */
 export function sanitizeJsonString(str: string): string {
   if (!str) return str;
   return str.replace(/"([^"\\]*(\\.[^"\\]*)*)"/g, (match) => {
@@ -20,10 +16,6 @@ export function sanitizeJsonString(str: string): string {
   });
 }
 
-/**
- * Safely parses a JSON string, attempting direct JSON.parse first,
- * and falling back to a sanitized JSON string parse if raw linebreaks exist inside string values.
- */
 export function safeJsonParse(jsonStr: string): unknown | null {
   if (!jsonStr) return null;
   const clean = jsonStr.trim();
@@ -39,10 +31,6 @@ export function safeJsonParse(jsonStr: string): unknown | null {
   }
 }
 
-/**
- * Unwraps outer JSON structures (e.g. { "itinerary": { ... } }, { "data": { ... } }, or root arrays)
- * to locate the object or array containing itinerary days/plans.
- */
 export function unwrapItineraryObject(rawObj: unknown): unknown {
   if (!rawObj) return rawObj;
 
@@ -137,7 +125,7 @@ export function isValidItinerary(rawObj: unknown): boolean {
 
 export function normalizeItinerary(
   rawObj: unknown,
-  defaultDestination: string = "Trip Plan"
+  defaultDestination: string = "Trip Plan",
 ): ItineraryResponse {
   if (!rawObj) {
     return { destination: defaultDestination, days: [] };
@@ -160,7 +148,7 @@ export function normalizeItinerary(
         target.title ||
         target.dest ||
         defaultDestination ||
-        "Trip Plan"
+        "Trip Plan",
     );
 
     const extracted =
@@ -199,7 +187,12 @@ export function normalizeItinerary(
     >;
 
     const dayNum = Number(
-      item.dayNumber ?? item.day ?? item.day_number ?? item.dayNo ?? item.day_no ?? idx + 1
+      item.dayNumber ??
+        item.day ??
+        item.day_number ??
+        item.dayNo ??
+        item.day_no ??
+        idx + 1,
     );
 
     const theme = cleanStringValue(
@@ -209,7 +202,7 @@ export function normalizeItinerary(
         item.summary ||
         item.dayTitle ||
         item.day_title ||
-        `Day ${dayNum}`
+        `Day ${dayNum}`,
     );
 
     const rawActivities =
@@ -242,7 +235,7 @@ export function normalizeItinerary(
               actObj.transport ||
               actObj.howToGetThere ||
               actObj.how_to_get_there ||
-              ""
+              "",
           );
           const operatingHours = cleanStringValue(
             actObj.operatingHours ||
@@ -250,18 +243,31 @@ export function normalizeItinerary(
               actObj.openingHours ||
               actObj.opening_hours ||
               actObj.hours ||
-              ""
+              "",
           );
 
           return {
             time: cleanStringValue(
-              actObj.time || actObj.timeOfDay || actObj.time_of_day || actObj.hour || "Flexible"
+              actObj.time ||
+                actObj.timeOfDay ||
+                actObj.time_of_day ||
+                actObj.hour ||
+                "Flexible",
             ),
             location: cleanStringValue(
-              actObj.location || actObj.place || actObj.spot || actObj.venue || dest
+              actObj.location ||
+                actObj.place ||
+                actObj.spot ||
+                actObj.venue ||
+                dest,
             ),
             description: cleanStringValue(
-              actObj.description || actObj.details || actObj.activity || actObj.title || actObj.name || ""
+              actObj.description ||
+                actObj.details ||
+                actObj.activity ||
+                actObj.title ||
+                actObj.name ||
+                "",
             ),
             ...(gettingThere ? { gettingThere } : {}),
             ...(operatingHours ? { operatingHours } : {}),
@@ -284,7 +290,7 @@ export function normalizeItinerary(
 
 export function parseMarkdownItinerary(
   text: string,
-  defaultDestination: string
+  defaultDestination: string,
 ): ItineraryResponse | null {
   if (!text || text.trim().length < 10) return null;
 
@@ -297,7 +303,7 @@ export function parseMarkdownItinerary(
     const line = rawLine.trim();
 
     const dayMatch = line.match(
-      /^(?:#+\s*)?(?:Day|\*\*Day)\s*(\d+)[:\s-]*(.*)$/i
+      /^(?:#+\s*)?(?:Day|\*\*Day)\s*(\d+)[:\s-]*(.*)$/i,
     );
     if (dayMatch) {
       if (currentDay) {
@@ -320,7 +326,7 @@ export function parseMarkdownItinerary(
 
     if (currentDay) {
       const timeMatch = line.match(
-        /^(?:[-*•]\s*)?\(?(\d{1,2}:\d{2}\s*(?:AM|PM)?|\d{1,2}\s*(?:AM|PM)|Morning|Afternoon|Evening)\)?[:\s-]*(.*)$/i
+        /^(?:[-*•]\s*)?\(?(\d{1,2}:\d{2}\s*(?:AM|PM)?|\d{1,2}\s*(?:AM|PM)|Morning|Afternoon|Evening)\)?[:\s-]*(.*)$/i,
       );
       if (timeMatch) {
         if (currentActivity) currentDay.activities.push(currentActivity);
@@ -370,13 +376,9 @@ export function parseMarkdownItinerary(
   return null;
 }
 
-/**
- * Fallback parser that guarantees non-empty text can always be converted into
- * a structured ItineraryResponse with at least 1 day and structured activities.
- */
 export function buildFallbackItinerary(
   text: string,
-  defaultDestination: string = "Trip Plan"
+  defaultDestination: string = "Trip Plan",
 ): ItineraryResponse {
   const lines = text
     .split("\n")
@@ -385,7 +387,7 @@ export function buildFallbackItinerary(
 
   const activities: Activity[] = lines.slice(0, 15).map((line) => {
     const timeMatch = line.match(
-      /^(Morning|Afternoon|Evening|\d{1,2}:\d{2}\s*(?:AM|PM)?)/i
+      /^(Morning|Afternoon|Evening|\d{1,2}:\d{2}\s*(?:AM|PM)?)/i,
     );
     const time = timeMatch ? timeMatch[1] : "Flexible";
     const description = line.replace(/^[-*•#\d.]+\s*/, "").trim();
@@ -419,7 +421,7 @@ export function buildFallbackItinerary(
 
 export function parseItineraryFromText(
   text: string,
-  defaultDestination: string = "Trip Plan"
+  defaultDestination: string = "Trip Plan",
 ): ItineraryResponse | null {
   if (!text || !text.trim()) return null;
 
@@ -429,49 +431,44 @@ export function parseItineraryFromText(
     .replace(/^```(?:json)?\s*/i, "")
     .replace(/\s*```$/i, "")
     .trim();
-
-  // 1. Direct or Sanitized JSON parse attempt
   const parsed = safeJsonParse(clean);
   if (parsed && isValidItinerary(parsed)) {
     const normalized = normalizeItinerary(parsed, defaultDestination);
     if (normalized.days.length > 0) return normalized;
   }
-
-  // 2. Search for candidate JSON object {...}
   const firstBrace = clean.indexOf("{");
   const lastBrace = clean.lastIndexOf("}");
   if (firstBrace !== -1 && lastBrace > firstBrace) {
     const jsonCandidate = clean.slice(firstBrace, lastBrace + 1);
     const parsedCandidate = safeJsonParse(jsonCandidate);
     if (parsedCandidate && isValidItinerary(parsedCandidate)) {
-      const normalized = normalizeItinerary(parsedCandidate, defaultDestination);
+      const normalized = normalizeItinerary(
+        parsedCandidate,
+        defaultDestination,
+      );
       if (normalized.days.length > 0) return normalized;
     }
   }
-
-  // 3. Search for candidate JSON array [...]
   const firstBracket = clean.indexOf("[");
   const lastBracket = clean.lastIndexOf("]");
   if (firstBracket !== -1 && lastBracket > firstBracket) {
     const arrayCandidate = clean.slice(firstBracket, lastBracket + 1);
     const parsedCandidate = safeJsonParse(arrayCandidate);
     if (parsedCandidate && isValidItinerary(parsedCandidate)) {
-      const normalized = normalizeItinerary(parsedCandidate, defaultDestination);
+      const normalized = normalizeItinerary(
+        parsedCandidate,
+        defaultDestination,
+      );
       if (normalized.days.length > 0) return normalized;
     }
   }
-
-  // 4. Markdown itinerary parse
   const mdResult = parseMarkdownItinerary(clean, defaultDestination);
   if (mdResult && mdResult.days.length > 0) {
     return mdResult;
   }
-
-  // 5. Fallback Guarantee: Convert any remaining non-empty response into structured view
   if (clean.length > 10) {
     return buildFallbackItinerary(clean, defaultDestination);
   }
 
   return null;
 }
-

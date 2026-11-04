@@ -34,19 +34,13 @@ export default function DocumentIngestionDrawer({
 }: DocumentIngestionDrawerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>("upload");
-
-  // Status state
   const [status, setStatus] = useState<RagStatusResponse | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(false);
-
-  // Ingestion action states
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{
     type: "success" | "error";
     message: string;
   } | null>(null);
-
-  // Form states
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileDestination, setFileDestination] = useState(defaultDestination);
 
@@ -59,15 +53,12 @@ export default function DocumentIngestionDrawer({
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<RagDocumentResponse[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-
-  // Fetch status when drawer opens or refreshed
   const fetchStatus = useCallback(async () => {
     setLoadingStatus(true);
     try {
       const data = await getKnowledgeStatus();
       setStatus(data);
     } catch {
-      // Backend may be offline or in simple mode without breaking UI
     } finally {
       setLoadingStatus(false);
     }
@@ -81,8 +72,6 @@ export default function DocumentIngestionDrawer({
     }
     fetchStatus();
   };
-
-  // Handle File Upload
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
@@ -120,8 +109,6 @@ export default function DocumentIngestionDrawer({
       setIsSubmitting(false);
     }
   };
-
-  // Handle Articles Ingestion
   const handleArticlesSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const articles = articlesText
@@ -157,8 +144,6 @@ export default function DocumentIngestionDrawer({
       setIsSubmitting(false);
     }
   };
-
-  // Handle Preload Bundled Data
   const handlePreloadSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -177,8 +162,6 @@ export default function DocumentIngestionDrawer({
       setIsSubmitting(false);
     }
   };
-
-  // Handle Similarity Search Test
   const handleSearchSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;

@@ -90,10 +90,7 @@ public class IngestionService {
         }
 
         String filename = file.getOriginalFilename() != null ? file.getOriginalFilename().toLowerCase() : "";
-        String dest = hasText(fallbackDestination) ? fallbackDestination.trim() : "General";
-
-        // 1. PDF File Ingestion
-        if (filename.endsWith(".pdf") || "application/pdf".equalsIgnoreCase(file.getContentType())) {
+        String dest = hasText(fallbackDestination) ? fallbackDestination.trim() : "General";        if (filename.endsWith(".pdf") || "application/pdf".equalsIgnoreCase(file.getContentType())) {
             ByteArrayResource resource = new ByteArrayResource(file.getBytes(), file.getOriginalFilename());
             PagePdfDocumentReader reader = new PagePdfDocumentReader(resource, PdfDocumentReaderConfig.builder().build());
             List<Document> splitDocs = TokenTextSplitter.builder().build().apply(reader.get());
@@ -113,10 +110,7 @@ public class IngestionService {
                     .toList();
 
             return recordAndStore(enrichedDocs, Map.of(dest, enrichedDocs.size()));
-        }
-
-        // 2. JSON File Ingestion
-        if (filename.endsWith(".json") || (file.getContentType() != null && file.getContentType().contains("json"))) {
+        }        if (filename.endsWith(".json") || (file.getContentType() != null && file.getContentType().contains("json"))) {
             JsonNode root;
             try (InputStream is = file.getInputStream()) {
                 root = objectMapper.readTree(is);
@@ -145,10 +139,7 @@ public class IngestionService {
             }
 
             throw new IllegalArgumentException("Unsupported JSON structure for ingestion.");
-        }
-
-        // 3. Plain Text / Markdown File Ingestion
-        String text = new String(file.getBytes(), StandardCharsets.UTF_8);
+        }        String text = new String(file.getBytes(), StandardCharsets.UTF_8);
         List<String> articles = Arrays.stream(text.split("(?m)^\\s*$\\n+"))
                 .map(String::trim)
                 .filter(this::hasText)
@@ -246,10 +237,7 @@ public class IngestionService {
     }
 
     private int recordAndStore(List<Document> docs, Map<String, Integer> counts) {
-        if (docs.isEmpty()) return 0;
-
-        // In-memory batch deduplication by Document ID to prevent duplicate vector rows
-        Map<String, Document> uniqueDocsMap = new LinkedHashMap<>();
+        if (docs.isEmpty()) return 0;        Map<String, Document> uniqueDocsMap = new LinkedHashMap<>();
         for (Document doc : docs) {
             if (doc != null && hasText(doc.getId())) {
                 uniqueDocsMap.put(doc.getId(), doc);
@@ -260,10 +248,7 @@ public class IngestionService {
         List<Document> uniqueDocs = new ArrayList<>(uniqueDocsMap.values());
 
         vectorStore.add(uniqueDocs);
-        ingestedDocumentCount.addAndGet(uniqueDocs.size());
-
-        // Recompute destination counts accurately based on unique deduplicated items
-        Map<String, Integer> uniqueCounts = new HashMap<>();
+        ingestedDocumentCount.addAndGet(uniqueDocs.size());        Map<String, Integer> uniqueCounts = new HashMap<>();
         for (Document doc : uniqueDocs) {
             Object destMeta = doc.getMetadata().get("destination");
             String dest = (destMeta instanceof String s && hasText(s)) ? s.trim() : "General";
