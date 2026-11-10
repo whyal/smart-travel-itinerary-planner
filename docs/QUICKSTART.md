@@ -100,8 +100,14 @@ export GEMINI_API_KEY="your-gemini-key"
 #### Recipe B: Ollama (Free / 100% Offline / Local GPU)
 *Runs locally on your laptop with no API keys or costs.*
 
-1. Install [Ollama](https://ollama.com/) and pull your chosen model:
+> [!IMPORTANT]
+> **Environment Parity (WSL2 / Windows)**: Ollama must be installed in the **same environment** where you run the backend. If you are developing inside WSL2 on Windows, install Ollama **directly inside WSL2** (`curl -fsSL https://ollama.com/install.sh | sh`), NOT as a Windows desktop app. Windows and WSL2 have isolated network namespaces by default; installing Ollama inside WSL2 avoids `connection refused` errors on `localhost:11434` and provides direct NVIDIA GPU acceleration via CUDA.
+
+1. Install [Ollama](https://ollama.com/) (directly in WSL2 if using WSL2) and pull your chosen model:
    ```bash
+   # Start the service if not running
+   ollama serve &
+
    # Option 1: BGE-M3 (SOTA multilingual model)
    ollama pull bge-m3
 
@@ -167,5 +173,5 @@ If you prefer editing configuration files instead of exporting terminal variable
 #### Q: Docker database fails with `port 5432 already in use`?
 **A**: You have a local PostgreSQL server already running. Either stop your local PostgreSQL (`sudo service postgresql stop`) or change the host port in `docker-compose.yml` to `"5433:5432"`.
 
-#### Q: Ollama says `connection refused`?
-**A**: Make sure Ollama is running (`ollama serve`). In WSL2, install Ollama directly inside WSL2 (`curl -fsSL https://ollama.com/install.sh | sh`) for direct `localhost:11434` access with GPU support.
+#### Q: Ollama says `connection refused` on `localhost:11434`?
+**A**: Make sure the Ollama service is running (`ollama serve &`). **Critical for Windows/WSL2**: Ollama must be installed in the **same environment** as the project. If running the backend inside WSL2, install Ollama directly inside WSL2 (`curl -fsSL https://ollama.com/install.sh | sh`). Running Ollama on Windows while Spring Boot runs inside WSL2 fails because WSL2 cannot reach Windows `localhost:11434` across the virtual network boundary by default.
