@@ -41,6 +41,10 @@ All AI agents and models working on this codebase **MUST** follow these invarian
    - Never use `---` or thematic break lines in Markdown files, documentation, or responses. Structure content using clear heading hierarchies and whitespace.
 6. 🚫 **No Unnecessary Comments in Source Code**:
    - Do not add unnecessary comments in the source code unless absolutely necessary. Code should be self-documenting; only retain or add comments for non-obvious business logic, complex workarounds, or essential domain caveats.
+7. 🚫 **No Redundant Documentation (Single Source of Truth)**:
+   - Do not repeat or duplicate identical notes, instructions, warnings, or callout blocks across multiple documentation files.
+   - Place documentation solely in the single most relevant and helpful file for users (e.g. setup & troubleshooting in [`docs/QUICKSTART.md`](docs/QUICKSTART.md), modular embedding design in [`docs/EMBEDDINGS.md`](docs/EMBEDDINGS.md), and API contracts in [`docs/API.md`](docs/API.md)).
+   - Link to the authoritative document instead of copy-pasting explanations across files.
 
 ## 3. Standard Verification Commands
 
