@@ -59,3 +59,23 @@ dependencyManagement {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+
+tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
+    val envFile = file(".env")
+    if (envFile.exists()) {
+        envFile.readLines().forEach { rawLine ->
+            val line = rawLine.trim()
+            if (line.isNotEmpty() && !line.startsWith("#")) {
+                val cleanLine = if (line.startsWith("export ")) line.removePrefix("export ").trim() else line
+                val parts = cleanLine.split("=", limit = 2)
+                if (parts.size == 2) {
+                    val key = parts[0].trim()
+                    val rawVal = parts[1].trim()
+                    val valWithoutComment = if (rawVal.contains(" #")) rawVal.substringBefore(" #").trim() else rawVal
+                    val value = valWithoutComment.trim('"', '\'')
+                    environment(key, value)
+                }
+            }
+        }
+    }
+}

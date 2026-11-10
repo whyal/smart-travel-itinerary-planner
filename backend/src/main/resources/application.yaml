@@ -8,8 +8,8 @@ spring:
       max-request-size: 50MB
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/tripplanner}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:password}
     driver-class-name: ${SPRING_DATASOURCE_DRIVER:org.postgresql.Driver}
   jpa:
     hibernate:
@@ -24,6 +24,9 @@ spring:
           api-key: ${GEMINI_API_KEY}
     ollama:
       base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      chat:
+        options:
+          model: ${CHAT_MODEL:qwen2.5:3b}
       embedding:
         model: ${EMBEDDING_MODEL:qwen3-embedding:0.6b}
     openai:
