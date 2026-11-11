@@ -30,12 +30,12 @@ public class SavedItineraryService {
     public SavedItineraryResponse saveItinerary(SaveItineraryRequest request) {
         SavedItinerary entity = new SavedItinerary(
                 null,
-                request.conversationId(),
-                request.destination(),
+                sanitizeText(request.conversationId()),
+                sanitizeText(request.destination()),
                 request.daysCount(),
                 toJson(request.formData()),
                 toJson(request.itinerary()),
-                request.rawText(),
+                sanitizeText(request.rawText()),
                 parseInstant(request.createdAt())
         );
 
@@ -88,10 +88,14 @@ public class SavedItineraryService {
     private String toJson(Object value) {
         if (value == null) return null;
         try {
-            return objectMapper.writeValueAsString(value);
+            return sanitizeText(objectMapper.writeValueAsString(value));
         } catch (JsonProcessingException e) {
             return "{}";
         }
+    }
+
+    private String sanitizeText(String input) {
+        return input != null ? input.replace("\u0000", "") : null;
     }
 
     private <T> T fromJson(String json, Class<T> clazz) {

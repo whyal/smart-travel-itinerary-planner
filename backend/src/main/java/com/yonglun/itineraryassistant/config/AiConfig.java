@@ -41,22 +41,75 @@ public class AiConfig {
     @Bean
     @Primary
     public ChatModel primaryChatModel(
+            EmbeddingProperties properties,
+            @Value("${app.chat.provider:${EMBEDDING_PROVIDER:}}") String configuredChatProvider,
+            @Value("${spring.ai.google.genai.api-key:}") String geminiApiKey,
             ObjectProvider<GoogleGenAiChatModel> googleChatModelProvider,
             ObjectProvider<OllamaChatModel> ollamaChatModelProvider,
             ObjectProvider<OpenAiChatModel> openAiChatModelProvider) {
-        GoogleGenAiChatModel google = googleChatModelProvider.getIfAvailable();
-        if (google != null) {
-            return google;
+
+        String provider = (configuredChatProvider != null && !configuredChatProvider.isBlank())
+                ? configuredChatProvider.trim().toLowerCase()
+                : (properties.getProvider() != null && !properties.getProvider().isBlank()
+                ? properties.getProvider().trim().toLowerCase()
+                : "google");
+
+        log.info("Configuring primary ChatModel [Active Provider: '{}']", provider);
+
+        switch (provider) {
+            case "ollama": {
+                OllamaChatModel ollama = ollamaChatModelProvider.getIfAvailable();
+                if (ollama != null) {
+                    log.info("Using autoconfigured OllamaChatModel as primary ChatModel.");
+                    return ollama;
+                }
+                throw new IllegalStateException("OllamaChatModel is not available. Please verify Ollama is running and configured.");
+            }
+
+            case "openai":
+            case "openai-compatible":
+            case "tei":
+            case "vllm": {
+                OpenAiChatModel openAi = openAiChatModelProvider.getIfAvailable();
+                if (openAi != null) {
+                    log.info("Using autoconfigured OpenAiChatModel as primary ChatModel.");
+                    return openAi;
+                }
+                throw new IllegalStateException("OpenAiChatModel is not available. Please verify spring.ai.openai configuration.");
+            }
+
+            case "google":
+            default: {
+                boolean hasGeminiKey = geminiApiKey != null
+                        && !geminiApiKey.isBlank()
+                        && !"dummy-key".equalsIgnoreCase(geminiApiKey.trim())
+                        && !geminiApiKey.startsWith("${");
+                if (hasGeminiKey) {
+                    GoogleGenAiChatModel google = googleChatModelProvider.getIfAvailable();
+                    if (google != null) {
+                        log.info("Using autoconfigured GoogleGenAiChatModel as primary ChatModel.");
+                        return google;
+                    }
+                } else {
+                    log.warn("GEMINI_API_KEY is not configured. Falling back to local OllamaChatModel if available...");
+                    OllamaChatModel ollama = ollamaChatModelProvider.getIfAvailable();
+                    if (ollama != null) {
+                        log.info("Falling back to OllamaChatModel as primary ChatModel.");
+                        return ollama;
+                    }
+                    OpenAiChatModel openAi = openAiChatModelProvider.getIfAvailable();
+                    if (openAi != null) {
+                        log.info("Falling back to OpenAiChatModel as primary ChatModel.");
+                        return openAi;
+                    }
+                }
+                GoogleGenAiChatModel google = googleChatModelProvider.getIfAvailable();
+                if (google != null) {
+                    return google;
+                }
+                throw new IllegalStateException("No ChatModel bean is currently available in application context.");
+            }
         }
-        OllamaChatModel ollama = ollamaChatModelProvider.getIfAvailable();
-        if (ollama != null) {
-            return ollama;
-        }
-        OpenAiChatModel openAi = openAiChatModelProvider.getIfAvailable();
-        if (openAi != null) {
-            return openAi;
-        }
-        throw new IllegalStateException("No ChatModel bean is currently available in application context.");
     }
 
     @Bean

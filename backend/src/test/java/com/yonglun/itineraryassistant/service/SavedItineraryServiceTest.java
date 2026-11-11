@@ -78,6 +78,33 @@ class SavedItineraryServiceTest {
     }
 
     @Test
+    void testSaveItinerary_SanitizesNullBytes() {
+        SaveItineraryRequest request = new SaveItineraryRequest(
+                "session\u0000-1",
+                "Tokyo\u0000",
+                3,
+                null,
+                null,
+                "raw\u0000 plan",
+                null
+        );
+
+        SavedItinerary savedEntity = new SavedItinerary(
+                1L, "session-1", "Tokyo", 3, null, null, "raw plan", Instant.now()
+        );
+        when(repository.save(any(SavedItinerary.class))).thenReturn(savedEntity);
+
+        service.saveItinerary(request);
+
+        ArgumentCaptor<SavedItinerary> captor = ArgumentCaptor.forClass(SavedItinerary.class);
+        verify(repository, times(1)).save(captor.capture());
+        SavedItinerary captured = captor.getValue();
+        assertThat(captured.getConversationId()).isEqualTo("session-1");
+        assertThat(captured.getDestination()).isEqualTo("Tokyo");
+        assertThat(captured.getRawText()).isEqualTo("raw plan");
+    }
+
+    @Test
     void testGetAllSavedItineraries() {
         SavedItinerary entity = new SavedItinerary(
                 1L, "conv-1", "Paris", 3, "{}", "{}", "raw", Instant.now()
