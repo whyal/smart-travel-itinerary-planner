@@ -12,7 +12,7 @@ export default function ItineraryLoadingSkeleton({
   formData,
   streamedTextLength,
 }: ItineraryLoadingSkeletonProps) {
-  const skeletonDayCount = Math.min(Number(formData.days) || 3, 3);
+  const skeletonDayCount = Math.max(1, Math.min(Number(formData.days) || 3, 5));
 
   return (
     <div className="space-y-6">
@@ -57,9 +57,9 @@ export default function ItineraryLoadingSkeleton({
         <div className="mt-4 flex items-center justify-between text-xs text-slate-500 font-mono">
           <div className="flex items-center space-x-2">
             <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
-            <span>Receiving streamed response...</span>
+            <span>Generating itinerary plan...</span>
           </div>
-          <span>{streamedTextLength} chars</span>
+          <span>{streamedTextLength > 0 ? `${streamedTextLength} chars received` : "Initializing..."}</span>
         </div>
       </div>
 

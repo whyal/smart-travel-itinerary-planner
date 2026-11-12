@@ -54,7 +54,7 @@ export default function ItineraryOutputView({
             {loading ? (
               <span className="flex items-center space-x-2 text-blue-600 font-medium text-sm">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Streaming Response...</span>
+                <span>Generating Itinerary...</span>
               </span>
             ) : (
               <span className="flex items-center space-x-2 text-emerald-600 font-medium text-sm">
@@ -117,7 +117,12 @@ export default function ItineraryOutputView({
 
       {/* Body Content */}
       <div className="p-6 sm:p-8">
-        {itinerary ? (
+        {loading ? (
+          <ItineraryLoadingSkeleton
+            formData={formData}
+            streamedTextLength={streamedText.length}
+          />
+        ) : itinerary ? (
           <StructuredItineraryView
             itinerary={itinerary}
             formData={formData}
@@ -126,11 +131,6 @@ export default function ItineraryOutputView({
             selectedDayFilter={selectedDayFilter}
             onSelectDayFilter={onSelectDayFilter}
             onDismissSaveMessage={onDismissSaveMessage}
-          />
-        ) : loading ? (
-          <ItineraryLoadingSkeleton
-            formData={formData}
-            streamedTextLength={streamedText.length}
           />
         ) : (
           <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
