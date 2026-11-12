@@ -63,9 +63,8 @@ frontend/app/
 │   │   ├── ItineraryFormFields.tsx    # Destination, dates, budget, pace inputs
 │   │   ├── StructuredItineraryView.tsx# Filterable day-by-day activity and dining cards
 │   │   ├── DayPlanCard.tsx            # Individual day plan card with morning/afternoon/evening slots
-│   │   ├── RawStreamView.tsx          # Terminal-style raw JSON/text output toggle view
 │   │   ├── ItineraryLoadingSkeleton.tsx# Animated loading skeleton during generation
-│   │   ├── ItineraryOutputView.tsx    # Container coordinating structured vs raw view and save actions
+│   │   ├── ItineraryOutputView.tsx    # Container coordinating structured view and save actions
 │   │   └── ErrorBanner.tsx            # Error alert with retry suggestions
 │   └── knowledge/
 │       └── DocumentIngestionDrawer.tsx# Modal drawer for file uploads, articles, and RAG status
