@@ -52,7 +52,7 @@ class ItineraryServiceTest {
     void testStreamItinerary() {
         when(chatClient.prompt()
                 .system(anyString())
-                .user(any(Consumer.class))
+                .user(anyString())
                 .advisors(any(Consumer.class))
                 .stream()
                 .content())
@@ -62,6 +62,19 @@ class ItineraryServiceTest {
 
         List<String> chunks = flux.collectList().block();
         assertThat(chunks).containsExactly("{\"destination\":", "\"Kyoto\"}");
+    }
+
+    @Test
+    void testSanitizeItinerary_PreservesGenericDestinationActivities() {
+        Itinerary.Activity act1 = new Itinerary.Activity("Morning", "Tokyo", "Visit the bustling morning market");
+        Itinerary.Activity act2 = new Itinerary.Activity("Afternoon", "Tokyo", "Stroll through central park");
+        Itinerary.DayPlan day1 = new Itinerary.DayPlan(1, "Tokyo Exploration", List.of(act1, act2));
+
+        Itinerary raw = new Itinerary("Tokyo", List.of(day1));
+        Itinerary sanitized = itineraryService.sanitizeItinerary(raw);
+
+        assertThat(sanitized).isNotNull();
+        assertThat(sanitized.days().get(0).activities()).hasSize(2);
     }
 
     @Test
@@ -104,5 +117,31 @@ class ItineraryServiceTest {
 
         Itinerary emptyDays = new Itinerary("Tokyo", null);
         assertThat(itineraryService.sanitizeItinerary(emptyDays)).isEqualTo(emptyDays);
+    }
+
+    @Test
+    void testSanitizeItinerary_CleansMetadataPrefixesAndWhitespace() {
+        Itinerary.Activity messyAct = new Itinerary.Activity(
+                "  Time:   09:00 AM  \n",
+                "  Title:  Osaka Castle (District: Chuo)  ",
+                "  Destination: Osaka\nTitle: Osaka Castle\nDistrict: Chuo\n\nWalk through the ancient fortress grounds.  ",
+                "  Transit:  5 min walk from Station  \n",
+                "  Operating Hours:  09:00 AM - 05:00 PM  "
+        );
+        Itinerary.DayPlan day1 = new Itinerary.DayPlan(1, "Day 1: Castle & History", List.of(messyAct));
+        Itinerary raw = new Itinerary("  Osaka  \n", List.of(day1));
+
+        Itinerary sanitized = itineraryService.sanitizeItinerary(raw);
+
+        assertThat(sanitized).isNotNull();
+        assertThat(sanitized.destination()).isEqualTo("Osaka");
+        assertThat(sanitized.days().get(0).theme()).isEqualTo("Castle & History");
+
+        Itinerary.Activity clean = sanitized.days().get(0).activities().get(0);
+        assertThat(clean.time()).isEqualTo("09:00 AM");
+        assertThat(clean.location()).isEqualTo("Osaka Castle");
+        assertThat(clean.description()).isEqualTo("Walk through the ancient fortress grounds.");
+        assertThat(clean.gettingThere()).isEqualTo("5 min walk from Station");
+        assertThat(clean.operatingHours()).isEqualTo("09:00 AM - 05:00 PM");
     }
 }

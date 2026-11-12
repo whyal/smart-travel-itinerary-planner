@@ -137,6 +137,17 @@ export default function ItineraryForm() {
     if (!currentItinerary) return false;
 
     const rawStream = targetText !== undefined ? targetText : streamedText;
+    let cleanRawText = rawStream;
+    try {
+      const clean = rawStream
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/\s*```$/i, "")
+        .trim();
+      cleanRawText = JSON.stringify(JSON.parse(clean), null, 2);
+    } catch {
+      cleanRawText = rawStream;
+    }
+
     const sessionUuid = targetId || conversationId || crypto.randomUUID();
     const currentForm = targetFormData || formData;
 
@@ -149,7 +160,7 @@ export default function ItineraryForm() {
       daysCount: currentItinerary.days.length,
       formData: currentForm,
       itinerary: currentItinerary,
-      rawText: rawStream,
+      rawText: cleanRawText,
       createdAt: new Date().toISOString(),
     };
 
