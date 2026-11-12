@@ -77,6 +77,25 @@ export function safeJsonParse(jsonStr: string): unknown | null {
   }
 }
 
+export function getProperty(
+  obj: Record<string, unknown> | null | undefined,
+  ...keys: string[]
+): unknown {
+  if (!obj || typeof obj !== "object") return undefined;
+  for (const k of keys) {
+    if (obj[k] !== undefined && obj[k] !== null) return obj[k];
+  }
+  const normalizedEntries = Object.entries(obj).map(
+    ([k, v]) => [k.replace(/\s+/g, "").toLowerCase(), v] as const,
+  );
+  for (const k of keys) {
+    const target = k.replace(/\s+/g, "").toLowerCase();
+    const found = normalizedEntries.find(([nk]) => nk === target);
+    if (found && found[1] !== undefined && found[1] !== null) return found[1];
+  }
+  return undefined;
+}
+
 export function unwrapItineraryObject(rawObj: unknown): unknown {
   if (!rawObj) return rawObj;
 
@@ -87,16 +106,17 @@ export function unwrapItineraryObject(rawObj: unknown): unknown {
   if (typeof rawObj !== "object" || rawObj === null) return rawObj;
   const obj = rawObj as Record<string, unknown>;
 
-  const directDays =
-    obj.days ||
-    obj.Days ||
-    obj.dayPlans ||
-    obj.day_plans ||
-    obj.dailyPlans ||
-    obj.daily_plans ||
-    obj.schedule ||
-    obj.daily_schedule ||
-    obj.plans;
+  const directDays = getProperty(
+    obj,
+    "days",
+    "dayPlans",
+    "day_plans",
+    "dailyPlans",
+    "daily_plans",
+    "schedule",
+    "daily_schedule",
+    "plans",
+  );
 
   if (Array.isArray(directDays) && directDays.length > 0) {
     return rawObj;
@@ -104,7 +124,6 @@ export function unwrapItineraryObject(rawObj: unknown): unknown {
 
   const wrapperKeys = [
     "itinerary",
-    "Itinerary",
     "data",
     "response",
     "result",
@@ -115,8 +134,9 @@ export function unwrapItineraryObject(rawObj: unknown): unknown {
   ];
 
   for (const key of wrapperKeys) {
-    if (obj[key] && typeof obj[key] === "object") {
-      const child = unwrapItineraryObject(obj[key]);
+    const val = getProperty(obj, key);
+    if (val && typeof val === "object") {
+      const child = unwrapItineraryObject(val);
       if (isValidItinerary(child)) {
         return child;
       }
@@ -144,25 +164,27 @@ export function isValidItinerary(rawObj: unknown): boolean {
   if (typeof obj !== "object" || obj === null) return false;
   const target = obj as Record<string, unknown>;
 
-  const dest =
-    target.destination ||
-    target.Destination ||
-    target.city ||
-    target.location ||
-    target.title ||
-    target.dest;
+  const dest = getProperty(
+    target,
+    "destination",
+    "city",
+    "location",
+    "title",
+    "dest",
+  );
 
-  const days =
-    target.days ||
-    target.Days ||
-    target.dayPlans ||
-    target.day_plans ||
-    target.dailyPlans ||
-    target.daily_plans ||
-    target.schedule ||
-    target.daily_schedule ||
-    target.plans ||
-    target.itinerary;
+  const days = getProperty(
+    target,
+    "days",
+    "dayPlans",
+    "day_plans",
+    "dailyPlans",
+    "daily_plans",
+    "schedule",
+    "daily_schedule",
+    "plans",
+    "itinerary",
+  );
 
   const hasDaysArray = Array.isArray(days) && days.length > 0;
 
@@ -187,27 +209,30 @@ export function normalizeItinerary(
   } else if (typeof unwrapped === "object" && unwrapped !== null) {
     const target = unwrapped as Record<string, unknown>;
     dest = cleanStringValue(
-      target.destination ||
-        target.Destination ||
-        target.city ||
-        target.location ||
-        target.title ||
-        target.dest ||
+      getProperty(
+        target,
+        "destination",
+        "city",
+        "location",
+        "title",
+        "dest",
+      ) ||
         defaultDestination ||
         "Trip Plan",
     );
 
-    const extracted =
-      target.days ||
-      target.Days ||
-      target.dayPlans ||
-      target.day_plans ||
-      target.dailyPlans ||
-      target.daily_plans ||
-      target.schedule ||
-      target.daily_schedule ||
-      target.plans ||
-      target.itinerary;
+    const extracted = getProperty(
+      target,
+      "days",
+      "dayPlans",
+      "day_plans",
+      "dailyPlans",
+      "daily_plans",
+      "schedule",
+      "daily_schedule",
+      "plans",
+      "itinerary",
+    );
 
     rawDays = Array.isArray(extracted) ? extracted : [];
   }
@@ -232,44 +257,50 @@ export function normalizeItinerary(
       unknown
     >;
 
-    const dayNum = Number(
-      item.dayNumber ??
-        item.day ??
-        item.day_number ??
-        item.dayNo ??
-        item.day_no ??
-        idx + 1,
+    const dayNumVal = getProperty(
+      item,
+      "dayNumber",
+      "day",
+      "day_number",
+      "dayNo",
+      "day_no",
     );
+    const dayNum = Number(dayNumVal ?? idx + 1);
 
     const rawTheme = cleanStringValue(
-      item.theme ||
-        item.title ||
-        item.heading ||
-        item.summary ||
-        item.dayTitle ||
-        item.day_title ||
-        `Day ${dayNum}`,
+      getProperty(
+        item,
+        "theme",
+        "title",
+        "heading",
+        "summary",
+        "dayTitle",
+        "day_title",
+        "date",
+      ) || `Day ${dayNum}`,
     );
     const theme = rawTheme.replace(/^(?:Day\s*\d+[:\s-]*|Theme[:\s-]*)/i, "").trim() || `Day ${dayNum} Highlights`;
 
-    const rawActivities =
-      item.activities ||
-      item.activity ||
-      item.attractions ||
-      item.attraction ||
-      item.places ||
-      item.placesToVisit ||
-      item.places_to_visit ||
-      item.sights ||
-      item.sightseeing ||
-      item.stops ||
-      item.locations ||
-      item.plan ||
-      item.plans ||
-      item.events ||
-      item.schedule ||
-      item.items ||
-      item.highlights;
+    const rawActivities = getProperty(
+      item,
+      "activities",
+      "activity",
+      "attractions",
+      "attraction",
+      "places",
+      "placesToVisit",
+      "places_to_visit",
+      "sights",
+      "sightseeing",
+      "stops",
+      "locations",
+      "plan",
+      "plans",
+      "events",
+      "schedule",
+      "items",
+      "highlights",
+    );
 
     let candidateActivities: unknown[] = [];
     if (Array.isArray(rawActivities)) {
@@ -315,33 +346,39 @@ export function normalizeItinerary(
 
       let gettingThere = stripMetadataHeader(
         cleanStringValue(
-          actObj.gettingThere ||
-            actObj.getting_there ||
-            actObj.transit ||
-            actObj.transport ||
-            actObj.howToGetThere ||
-            actObj.how_to_get_there ||
-            "",
+          getProperty(
+            actObj,
+            "gettingThere",
+            "getting_there",
+            "transit",
+            "transport",
+            "howToGetThere",
+            "how_to_get_there",
+          ) || "",
         ),
       );
       let operatingHours = stripMetadataHeader(
         cleanStringValue(
-          actObj.operatingHours ||
-            actObj.operating_hours ||
-            actObj.openingHours ||
-            actObj.opening_hours ||
-            actObj.hours ||
-            "",
+          getProperty(
+            actObj,
+            "operatingHours",
+            "operating_hours",
+            "openingHours",
+            "opening_hours",
+            "hours",
+          ) || "",
         ),
       );
 
       let description = cleanDocumentDescription(
-        actObj.description ||
-          actObj.details ||
-          actObj.activity ||
-          actObj.title ||
-          actObj.name ||
-          "",
+        getProperty(
+          actObj,
+          "description",
+          "details",
+          "activity",
+          "title",
+          "name",
+        ) || "",
       );
 
       if (!gettingThere && description) {
@@ -365,20 +402,12 @@ export function normalizeItinerary(
       }
 
       const rawLocation = cleanStringValue(
-        actObj.location ||
-          actObj.place ||
-          actObj.spot ||
-          actObj.venue ||
-          dest,
+        getProperty(actObj, "location", "place", "spot", "venue") || dest,
       );
       const location = stripMetadataHeader(rawLocation) || dest;
 
       let time = cleanStringValue(
-        actObj.time ||
-          actObj.timeOfDay ||
-          actObj.time_of_day ||
-          actObj.hour ||
-          "",
+        getProperty(actObj, "time", "timeOfDay", "time_of_day", "hour") || "",
       );
       time = time.replace(/^(?:time|time of day):\s*/i, "").trim();
       if (!time || time.toLowerCase() === "flexible") {

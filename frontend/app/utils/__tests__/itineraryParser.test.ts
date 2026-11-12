@@ -8,9 +8,22 @@ import {
   parseMarkdownItinerary,
   buildFallbackItinerary,
   stripDocumentMetadataPrefixes,
+  getProperty,
 } from "../itineraryParser";
 
 describe("itineraryParser", () => {
+  describe("getProperty resilience", () => {
+    it("retrieves property values despite surrounding whitespace or newlines in keys", () => {
+      const obj = {
+        "\nactivities\n": [{ time: "09:00 AM", location: "Beijing", description: "Visit Forbidden City" }],
+        " destination ": "Beijing",
+      };
+      expect(getProperty(obj, "activities")).toEqual([
+        { time: "09:00 AM", location: "Beijing", description: "Visit Forbidden City" },
+      ]);
+      expect(getProperty(obj, "destination")).toBe("Beijing");
+    });
+  });
   describe("sanitizeJsonString & safeJsonParse", () => {
     it("handles empty or falsy strings gracefully", () => {
       expect(sanitizeJsonString("")).toBe("");
@@ -80,6 +93,30 @@ describe("itineraryParser", () => {
   });
 
   describe("normalizeItinerary", () => {
+    it("normalizes day plans with whitespace in keys and date property", () => {
+      const raw = {
+        destination: "Beijing",
+        " days ": [
+          {
+            date: "Day 1 - Imperial Exploration",
+            " activities ": [
+              {
+                time: "09:00 AM",
+                location: "Forbidden City",
+                description: "Explore the imperial palace halls and courtyards",
+              },
+            ],
+          },
+        ],
+      };
+
+      const normalized = normalizeItinerary(raw, "Beijing");
+      expect(normalized.days).toHaveLength(1);
+      expect(normalized.days[0].theme).toBe("Imperial Exploration");
+      expect(normalized.days[0].activities).toHaveLength(1);
+      expect(normalized.days[0].activities[0].location).toBe("Forbidden City");
+    });
+
     it("normalizes array of string activities and day strings", () => {
       const rawDays = [
         "Visit the Eiffel Tower in the morning and Louvre in afternoon",
