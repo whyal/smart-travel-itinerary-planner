@@ -64,40 +64,61 @@ export async function streamItinerary(
   }
 
   const decoder = new TextDecoder("utf-8");
+  let buffer = "";
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
 
-    const rawChunk = decoder.decode(value, { stream: true });
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+
     let textChunk = "";
-    if (rawChunk.includes("data:")) {
-      const lines = rawChunk.split("\n");
-      for (const line of lines) {
-        if (line.startsWith("data:")) {
-          const content = line.slice(5).trimStart();
-          if (content !== "[DONE]") {
-            textChunk += content + "\n";
-          }
-        } else if (
-          line.trim() &&
-          !line.startsWith("event:") &&
-          !line.startsWith("id:") &&
-          !line.startsWith("retry:")
-        ) {
-          textChunk += line + "\n";
+    for (const rawLine of lines) {
+      const line = rawLine.endsWith("\r") ? rawLine.slice(0, -1) : rawLine;
+      if (line.startsWith("data:")) {
+        const content = line.slice(5);
+        if (content !== "[DONE]") {
+          textChunk += content;
         }
+      } else if (
+        !line.startsWith("event:") &&
+        !line.startsWith("id:") &&
+        !line.startsWith("retry:") &&
+        line.length > 0
+      ) {
+        textChunk += line;
       }
-    } else {
-      textChunk = rawChunk;
     }
 
     if (textChunk) {
       onChunk(textChunk);
     }
   }
-  const finalChunk = decoder.decode();
-  if (finalChunk) {
-    onChunk(finalChunk);
+
+  buffer += decoder.decode();
+  if (buffer.length > 0) {
+    const lines = buffer.split("\n");
+    let textChunk = "";
+    for (const rawLine of lines) {
+      const line = rawLine.endsWith("\r") ? rawLine.slice(0, -1) : rawLine;
+      if (line.startsWith("data:")) {
+        const content = line.slice(5);
+        if (content !== "[DONE]") {
+          textChunk += content;
+        }
+      } else if (
+        !line.startsWith("event:") &&
+        !line.startsWith("id:") &&
+        !line.startsWith("retry:") &&
+        line.length > 0
+      ) {
+        textChunk += line;
+      }
+    }
+    if (textChunk) {
+      onChunk(textChunk);
+    }
   }
 }

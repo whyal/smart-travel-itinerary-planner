@@ -7,9 +7,23 @@ import {
   normalizeItinerary,
   parseMarkdownItinerary,
   buildFallbackItinerary,
+  stripDocumentMetadataPrefixes,
+  getProperty,
 } from "../itineraryParser";
 
 describe("itineraryParser", () => {
+  describe("getProperty resilience", () => {
+    it("retrieves property values despite surrounding whitespace or newlines in keys", () => {
+      const obj = {
+        "\nactivities\n": [{ time: "09:00 AM", location: "Beijing", description: "Visit Forbidden City" }],
+        " destination ": "Beijing",
+      };
+      expect(getProperty(obj, "activities")).toEqual([
+        { time: "09:00 AM", location: "Beijing", description: "Visit Forbidden City" },
+      ]);
+      expect(getProperty(obj, "destination")).toBe("Beijing");
+    });
+  });
   describe("sanitizeJsonString & safeJsonParse", () => {
     it("handles empty or falsy strings gracefully", () => {
       expect(sanitizeJsonString("")).toBe("");
@@ -34,6 +48,12 @@ describe("itineraryParser", () => {
 
     it("returns null for completely invalid JSON that cannot be recovered", () => {
       expect(safeJsonParse("{ broken json without closing")).toBeNull();
+    });
+
+    it("strips metadata headers and excessive whitespace from single string values", () => {
+      expect(stripDocumentMetadataPrefixes("Title: Osaka Castle (District: Chuo)")).toBe("Osaka Castle");
+      expect(stripDocumentMetadataPrefixes("  Transit:   Take subway line   ")).toBe("Take subway line");
+      expect(stripDocumentMetadataPrefixes("")).toBe("");
     });
   });
 
@@ -73,6 +93,30 @@ describe("itineraryParser", () => {
   });
 
   describe("normalizeItinerary", () => {
+    it("normalizes day plans with whitespace in keys and date property", () => {
+      const raw = {
+        destination: "Beijing",
+        " days ": [
+          {
+            date: "Day 1 - Imperial Exploration",
+            " activities ": [
+              {
+                time: "09:00 AM",
+                location: "Forbidden City",
+                description: "Explore the imperial palace halls and courtyards",
+              },
+            ],
+          },
+        ],
+      };
+
+      const normalized = normalizeItinerary(raw, "Beijing");
+      expect(normalized.days).toHaveLength(1);
+      expect(normalized.days[0].theme).toBe("Imperial Exploration");
+      expect(normalized.days[0].activities).toHaveLength(1);
+      expect(normalized.days[0].activities[0].location).toBe("Forbidden City");
+    });
+
     it("normalizes array of string activities and day strings", () => {
       const rawDays = [
         "Visit the Eiffel Tower in the morning and Louvre in afternoon",
@@ -111,6 +155,110 @@ describe("itineraryParser", () => {
       const act = normalized.days[0].activities[0];
       expect(act.gettingThere).toBe("Take bus 206 from Kyoto Station");
       expect(act.operatingHours).toBe("6:00 AM - 6:00 PM");
+    });
+
+    it("normalizes alternative activity key names such as attractions, places, sights", () => {
+      const rawWithAttractions = {
+        destination: "Osaka",
+        days: [
+          {
+            dayNumber: 1,
+            theme: "Food & Sights",
+            attractions: [
+              {
+                time: "Morning",
+                location: "Osaka Castle",
+                description: "Explore fortress grounds",
+              },
+              {
+                time: "Evening",
+                location: "Dotonbori",
+                description: "Street food and neon signs",
+              },
+            ],
+          },
+        ],
+      };
+
+      const normalized = normalizeItinerary(rawWithAttractions, "Osaka");
+      expect(normalized.days[0].activities.length).toBe(2);
+      expect(normalized.days[0].activities[0].location).toBe("Osaka Castle");
+      expect(normalized.days[0].activities[1].location).toBe("Dotonbori");
+    });
+
+    it("normalizes activities structured as time-slot object maps", () => {
+      const rawWithSlotMap = {
+        destination: "Tokyo",
+        days: [
+          {
+            dayNumber: 1,
+            theme: "Tokyo Highlights",
+            activities: {
+              Morning: { location: "Senso-ji", description: "Historic temple" },
+              Afternoon: { location: "Akihabara", description: "Electronics district" },
+            },
+          },
+        ],
+      };
+
+      const normalized = normalizeItinerary(rawWithSlotMap, "Tokyo");
+      expect(normalized.days[0].activities.length).toBe(2);
+      expect(normalized.days[0].activities[0].location).toBe("Senso-ji");
+      expect(normalized.days[0].activities[1].location).toBe("Akihabara");
+    });
+
+    it("strips document metadata prefixes and normalizes inconsistent document copy", () => {
+      const rawWithMetadata = {
+        destination: "  Osaka  ",
+        days: [
+          {
+            dayNumber: 1,
+            theme: "Day 1: Castle & Dotonbori",
+            activities: [
+              {
+                time: "09:00 AM",
+                location: "Title: Osaka Castle",
+                description:
+                  "Destination: Osaka\nTitle: Osaka Castle\nDistrict: Chuo\nCategory: Historical\n\nStroll through fortress grounds.",
+                gettingThere: "Transit: 5 min walk from Station",
+                operatingHours: "Hours: 09:00 AM - 05:00 PM",
+              },
+            ],
+          },
+        ],
+      };
+
+      const normalized = normalizeItinerary(rawWithMetadata, "Osaka");
+      const act = normalized.days[0].activities[0];
+      expect(normalized.days[0].theme).toBe("Castle & Dotonbori");
+      expect(act.location).toBe("Osaka Castle");
+      expect(act.description).toBe("Stroll through fortress grounds.");
+      expect(act.gettingThere).toBe("5 min walk from Station");
+      expect(act.operatingHours).toBe("09:00 AM - 05:00 PM");
+    });
+
+    it("provides clean consistent UI defaults for missing transit and operating hours", () => {
+      const rawMinimal = {
+        destination: "Kyoto",
+        days: [
+          {
+            dayNumber: 1,
+            theme: "Temples",
+            activities: [
+              {
+                location: "Kinkaku-ji",
+                description: "Visit the Golden Pavilion",
+              },
+            ],
+          },
+        ],
+      };
+
+      const normalized = normalizeItinerary(rawMinimal, "Kyoto");
+      const act = normalized.days[0].activities[0];
+      expect(act.time).toBe("09:00 AM");
+      expect(act.gettingThere).toBe("Accessible via local transit or walking");
+      expect(act.operatingHours).toBe("Flexible / General visiting hours");
     });
   });
 
@@ -167,6 +315,20 @@ Day 1: London Highlights
       expect(result?.days[0].activities[0].description).toContain(
         "Rosetta Stone",
       );
+    });
+
+    it("parses numbered activity lists and bold items into distinct activities", () => {
+      const markdown = `
+Day 1: Osaka Highlights
+1. **Osaka Castle**: Explore the ancient castle tower and Nishinomaru garden.
+2. **Dotonbori**: Sample local takoyaki and stroll the bustling canal walkway.
+`;
+
+      const result = parseMarkdownItinerary(markdown, "Osaka");
+      expect(result).not.toBeNull();
+      expect(result?.days[0].activities.length).toBe(2);
+      expect(result?.days[0].activities[0].location).toBe("Osaka Castle");
+      expect(result?.days[0].activities[1].location).toBe("Dotonbori");
     });
   });
 

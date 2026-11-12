@@ -286,6 +286,40 @@ class IngestionServiceTest {
 
             assertThat(secondGeneratedId).isEqualTo(firstGeneratedId);
         }
+
+        @Test
+        @DisplayName("Sanitization: Strips null bytes from document fields and metadata to prevent PostgreSQL UTF-8 0x00 error")
+        void testIngestStructuredDocuments_SanitizesNullBytes() {
+            TravelDocumentDto doc = new TravelDocumentDto(
+                    "doc\u0000-id",
+                    "Tokyo\u0000",
+                    "Sens\u0000o-ji",
+                    "temple\u0000",
+                    "Asakusa\u0000",
+                    "Oldest\u0000 temple in Tokyo\u0000.",
+                    List.of("historic\u0000", "temple"),
+                    "1-2 hours\u0000",
+                    "Morning\u0000",
+                    Map.of("note\u0000", "popular\u0000 attraction")
+            );
+
+            int count = ingestionService.ingestDocuments(List.of(doc));
+
+            assertThat(count).isEqualTo(1);
+            verify(vectorStore, times(1)).add(documentsCaptor.capture());
+            Document captured = documentsCaptor.getValue().get(0);
+
+            assertThat(captured.getId()).isEqualTo("doc-id");
+            assertThat(captured.getText()).doesNotContain("\u0000");
+            assertThat(captured.getText()).contains("Destination: Tokyo");
+            assertThat(captured.getText()).contains("Title: Senso-ji");
+            assertThat(captured.getText()).contains("Oldest temple in Tokyo.");
+
+            assertThat(captured.getMetadata()).doesNotContainKey("note\u0000");
+            assertThat(captured.getMetadata()).containsEntry("note", "popular attraction");
+            assertThat(captured.getMetadata()).containsEntry("destination", "Tokyo");
+            assertThat(captured.getMetadata()).containsEntry("tags", "historic, temple");
+        }
     }
 
     @Nested
@@ -371,6 +405,26 @@ class IngestionServiceTest {
 
             assertThat(count).isZero();
             verifyNoInteractions(vectorStore);
+        }
+
+        @Test
+        @DisplayName("Sanitization: Strips null bytes from raw articles and destination")
+        void testIngestDestinationKnowledge_SanitizesNullBytes() {
+            List<String> rawArticles = List.of(
+                    "Article\u0000 1 with embedded null byte\u0000.",
+                    "Article\u0000 2 about shrines\u0000."
+            );
+
+            int count = ingestionService.ingestDestinationKnowledge(rawArticles, "Kyoto\u0000");
+
+            assertThat(count).isEqualTo(2);
+            verify(vectorStore, times(1)).add(documentsCaptor.capture());
+            List<Document> captured = documentsCaptor.getValue();
+            assertThat(captured).hasSize(2);
+            assertThat(captured.get(0).getText()).isEqualTo("Article 1 with embedded null byte.");
+            assertThat(captured.get(0).getMetadata()).containsEntry("destination", "Kyoto");
+            assertThat(captured.get(1).getText()).isEqualTo("Article 2 about shrines.");
+            assertThat(captured.get(1).getMetadata()).containsEntry("destination", "Kyoto");
         }
     }
 
@@ -671,6 +725,31 @@ class IngestionServiceTest {
             assertThat(ex.getMessage()).contains("Unsupported JSON structure");
             verifyNoInteractions(vectorStore);
         }
+
+        @Test
+        @DisplayName("Sanitization: Text file with embedded null bytes is stripped before storage")
+        void testIngestFile_TextFileWithNullBytes_Sanitized() throws Exception {
+            String textContent = "First paragraph\u0000 with null byte.\n\nSecond paragraph\u0000 with null byte.";
+            MockMultipartFile file = new MockMultipartFile(
+                    "file",
+                    "notes.txt",
+                    "text/plain",
+                    textContent.getBytes(StandardCharsets.UTF_8)
+            );
+
+            int count = ingestionService.ingestFile(file, "Osaka\u0000");
+
+            assertThat(count).isEqualTo(2);
+            verify(vectorStore, times(1)).add(documentsCaptor.capture());
+            List<Document> docs = documentsCaptor.getValue();
+            assertThat(docs).hasSize(2);
+            assertThat(docs.get(0).getText()).doesNotContain("\u0000");
+            assertThat(docs.get(0).getText()).isEqualTo("First paragraph with null byte.");
+            assertThat(docs.get(0).getMetadata()).containsEntry("destination", "Osaka");
+            assertThat(docs.get(1).getText()).doesNotContain("\u0000");
+            assertThat(docs.get(1).getText()).isEqualTo("Second paragraph with null byte.");
+            assertThat(docs.get(1).getMetadata()).containsEntry("destination", "Osaka");
+        }
     }
 
     @Nested
@@ -806,6 +885,16 @@ class IngestionServiceTest {
 
             ingestionService.similaritySearch("ramen", -10);
             assertThat(searchRequestCaptor.getValue().getTopK()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("Sanitization: Strips null bytes from query in similaritySearch")
+        void testSimilaritySearch_SanitizesNullBytesInQuery() {
+            when(vectorStore.similaritySearch(searchRequestCaptor.capture())).thenReturn(List.of());
+
+            ingestionService.similaritySearch("tokyo\u0000 food", 3);
+
+            assertThat(searchRequestCaptor.getValue().getQuery()).isEqualTo("tokyo food");
         }
     }
 

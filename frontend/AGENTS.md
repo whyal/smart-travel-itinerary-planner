@@ -13,7 +13,6 @@ The frontend client provides an interactive, real-time travel planning interface
 | **Main Orchestrator** | [`app/components/ItineraryForm.tsx`](app/components/ItineraryForm.tsx) | Form state management, SSE fetch stream reader, and UI coordinator. |
 | **Drawer & Local Storage** | [`app/components/ItineraryHistory.tsx`](app/components/ItineraryHistory.tsx) | Saved itinerary history drawer and `localStorage` DAO. |
 | **Structured Cards View** | [`app/components/itinerary/StructuredItineraryView.tsx`](app/components/itinerary/StructuredItineraryView.tsx) | Filterable day-by-day activity and dining cards. |
-| **Raw Stream Viewer** | [`app/components/itinerary/RawStreamView.tsx`](app/components/itinerary/RawStreamView.tsx) | Terminal-style raw JSON/text output toggle view. |
 | **Stream Parser** | [`app/utils/itineraryParser.ts`](app/utils/itineraryParser.ts) | Sanitizes and parses partial/complete streaming AI responses. |
 | **REST Client** | [`app/services/itineraryApi.ts`](app/services/itineraryApi.ts) | Fetch wrapper for backend persistence and knowledge endpoints. |
 | **Data Types** | [`app/types/itinerary.ts`](app/types/itinerary.ts) | Core TypeScript interfaces aligned with backend Java records. |

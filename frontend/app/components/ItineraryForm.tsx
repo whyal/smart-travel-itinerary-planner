@@ -37,9 +37,6 @@ export default function ItineraryForm() {
   const [itinerary, setItinerary] = useState<ItineraryResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<"structured" | "raw">(
-    "structured",
-  );
   const [selectedDayFilter, setSelectedDayFilter] = useState<number | "all">(
     "all",
   );
@@ -110,7 +107,6 @@ export default function ItineraryForm() {
     setFormData(item.formData);
     setStreamedText(item.streamedText);
     setSelectedDayFilter("all");
-    setActiveTab("structured");
     setError(null);
     setSaveToDbStatus("idle");
     setSaveToDbMessage(null);
@@ -137,6 +133,17 @@ export default function ItineraryForm() {
     if (!currentItinerary) return false;
 
     const rawStream = targetText !== undefined ? targetText : streamedText;
+    let cleanRawText = rawStream;
+    try {
+      const clean = rawStream
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/\s*```$/i, "")
+        .trim();
+      cleanRawText = JSON.stringify(JSON.parse(clean), null, 2);
+    } catch {
+      cleanRawText = rawStream;
+    }
+
     const sessionUuid = targetId || conversationId || crypto.randomUUID();
     const currentForm = targetFormData || formData;
 
@@ -149,7 +156,7 @@ export default function ItineraryForm() {
       daysCount: currentItinerary.days.length,
       formData: currentForm,
       itinerary: currentItinerary,
-      rawText: rawStream,
+      rawText: cleanRawText,
       createdAt: new Date().toISOString(),
     };
 
@@ -272,14 +279,6 @@ Generate a ${formData.days}-day itinerary matching these constraints.`;
         (chunk) => {
           accumulatedText += chunk;
           setStreamedText(accumulatedText);
-          const streamedParsed = parseItineraryFromText(
-            accumulatedText,
-            formData.destination,
-          );
-          if (streamedParsed) {
-            setItinerary(streamedParsed);
-            finalParsedItinerary = streamedParsed;
-          }
         },
       );
       const finalParsed = parseItineraryFromText(
@@ -361,18 +360,16 @@ Generate a ${formData.days}-day itinerary matching these constraints.`;
       {/* Error Banner */}
       <ErrorBanner error={error} />
 
-      {/* Output View (Formatted / Raw Stream / Loading) */}
+      {/* Output View (Formatted / Loading) */}
       <ItineraryOutputView
         loading={loading}
         streamedText={streamedText}
         itinerary={itinerary}
         formData={formData}
-        activeTab={activeTab}
         selectedDayFilter={selectedDayFilter}
         saveToDbStatus={saveToDbStatus}
         saveToDbMessage={saveToDbMessage}
         streamEndRef={streamEndRef}
-        onActiveTabChange={setActiveTab}
         onSelectDayFilter={setSelectedDayFilter}
         onSaveToDatabase={() => handleSaveToDatabase()}
         onDismissSaveMessage={() => setSaveToDbMessage(null)}
