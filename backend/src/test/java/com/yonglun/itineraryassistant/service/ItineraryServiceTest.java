@@ -10,10 +10,8 @@ import org.springframework.ai.chat.client.ChatClient;
 import reactor.core.publisher.Flux;
 
 import java.util.List;
-import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
@@ -35,12 +33,11 @@ class ItineraryServiceTest {
         when(chatClient.prompt()
                 .system(anyString())
                 .user(anyString())
-                .advisors(any(Consumer.class))
                 .stream()
                 .content())
                 .thenReturn(Flux.just("{\"destination\":", "\"Kyoto\"}"));
 
-        Flux<String> flux = itineraryService.streamItinerary("3 days in Kyoto", "conv-1");
+        Flux<String> flux = itineraryService.streamItinerary("3 days in Kyoto");
 
         List<String> chunks = flux.collectList().block();
         assertThat(chunks).containsExactly("{\"destination\":", "\"Kyoto\"}");

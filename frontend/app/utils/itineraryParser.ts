@@ -430,9 +430,22 @@ export function normalizeItinerary(
     };
   });
 
+  const seen = new Set<string>();
+  const destKey = cleanStringValue(dest).toLowerCase();
+  const uniqueDays = days.map((day) => ({
+    ...day,
+    activities: day.activities.filter((act) => {
+      const key = act.location.trim().toLowerCase();
+      if (!key || key === destKey) return true;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }),
+  }));
+
   return {
     destination: cleanStringValue(dest),
-    days,
+    days: uniqueDays,
   };
 }
 

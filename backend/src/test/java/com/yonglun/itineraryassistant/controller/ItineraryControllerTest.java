@@ -43,7 +43,7 @@ class ItineraryControllerTest {
     void testStreamItinerary() throws Exception {
         PromptRequest request = new PromptRequest("Trip to Kyoto", "conv-1");
 
-        when(itineraryService.streamItinerary(eq("Trip to Kyoto"), eq("conv-1")))
+        when(itineraryService.streamItinerary(eq("Trip to Kyoto")))
                 .thenReturn(Flux.just("chunk1", "chunk2"));
 
         mockMvc.perform(post("/api/itinerary/stream")

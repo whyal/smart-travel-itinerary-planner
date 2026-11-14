@@ -27,6 +27,7 @@ spring:
       chat:
         options:
           model: ${CHAT_MODEL:qwen2.5:3b}
+          num-ctx: ${OLLAMA_NUM_CTX:8192}
       embedding:
         model: ${EMBEDDING_MODEL:qwen3-embedding:0.6b}
     openai:

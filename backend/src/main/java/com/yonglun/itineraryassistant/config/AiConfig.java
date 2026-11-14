@@ -4,11 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
-import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.ai.chat.memory.ChatMemoryRepository;
-import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.embedding.EmbeddingModel;
@@ -114,14 +110,6 @@ public class AiConfig {
     }
 
     @Bean
-    public ChatMemory chatMemory(ChatMemoryRepository chatMemoryRepository) {
-        return MessageWindowChatMemory.builder()
-                .chatMemoryRepository(chatMemoryRepository)
-                .maxMessages(20)
-                .build();
-    }
-
-    @Bean
     @ConditionalOnProperty(name = "app.vectorstore.type", havingValue = "simple")
     public VectorStore simpleVectorStore(EmbeddingModel embeddingModel) {
         log.info("Initializing in-memory SimpleVectorStore.");
@@ -166,8 +154,7 @@ public class AiConfig {
     @Bean
     public ChatClient chatClient(
             ChatClient.Builder builder,
-            VectorStore vectorStore,
-            ChatMemory chatMemory) {
+            VectorStore vectorStore) {
 
         PromptTemplate travelRagPromptTemplate = new PromptTemplate("""
                 {query}
@@ -183,7 +170,6 @@ public class AiConfig {
 
         return builder
                 .defaultAdvisors(
-                        MessageChatMemoryAdvisor.builder(chatMemory).build(),
                         QuestionAnswerAdvisor.builder(vectorStore)
                                 .searchRequest(SearchRequest.builder()
                                         .topK(6)

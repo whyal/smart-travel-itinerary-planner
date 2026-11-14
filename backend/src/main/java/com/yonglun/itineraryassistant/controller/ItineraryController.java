@@ -20,7 +20,7 @@ public class ItineraryController {
         @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> streamItinerary(@RequestBody PromptRequest request) {
         PromptRequest valid = validated(request);
-        return itineraryService.streamItinerary(valid.prompt(), valid.conversationId());
+        return itineraryService.streamItinerary(valid.prompt());
     }
 
     private static PromptRequest validated(PromptRequest request) {

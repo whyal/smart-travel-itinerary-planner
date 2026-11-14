@@ -2,7 +2,6 @@ package com.yonglun.itineraryassistant.service;
 
 import com.yonglun.itineraryassistant.model.Itinerary;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -33,11 +32,10 @@ public class ItineraryService {
         this.chatClient = chatClient;
     }
 
-    public Flux<String> streamItinerary(String prompt, String conversationId) {
+    public Flux<String> streamItinerary(String prompt) {
         return chatClient.prompt()
                 .system(systemPrompt)
                 .user(prompt)
-                .advisors(spec -> spec.param(ChatMemory.CONVERSATION_ID, conversationId))
                 .stream()
                 .content();
     }

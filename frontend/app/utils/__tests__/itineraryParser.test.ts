@@ -184,6 +184,26 @@ describe("itineraryParser", () => {
       expect(normalized.days[0].activities[1].location).toBe("Dotonbori");
     });
 
+    it("drops activities whose location repeats on a later day", () => {
+      const normalized = normalizeItinerary(
+        {
+          destination: "Osaka",
+          days: [
+            { dayNumber: 1, activities: [{ time: "09:00 AM", location: "Osaka Castle" }] },
+            {
+              dayNumber: 2,
+              activities: [
+                { time: "09:00 AM", location: " osaka castle " },
+                { time: "01:00 PM", location: "Dotonbori" },
+              ],
+            },
+          ],
+        },
+        "Osaka",
+      );
+      expect(normalized.days[1].activities.map((a) => a.location)).toEqual(["Dotonbori"]);
+    });
+
     it("normalizes activities structured as time-slot object maps", () => {
       const rawWithSlotMap = {
         destination: "Tokyo",

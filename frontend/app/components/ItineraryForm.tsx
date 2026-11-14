@@ -50,6 +50,7 @@ export default function ItineraryForm() {
   useEffect(() => {
     queueMicrotask(() => {
       let savedId = localStorage.getItem("itinerary_conversation_id");
+      const hadStoredId = !!savedId;
       if (!savedId) {
         savedId = crypto.randomUUID();
         localStorage.setItem("itinerary_conversation_id", savedId);
@@ -83,7 +84,7 @@ export default function ItineraryForm() {
         }
       }
 
-      if (history.length > 0) {
+      if (!hadStoredId && history.length > 0) {
         const latest = history[0];
         setConversationId(latest.id);
         setFormData(latest.formData);
