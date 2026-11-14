@@ -1,6 +1,7 @@
 import { SavedItineraryItem } from "../types/itinerary";
 
 const HISTORY_KEY = "itinerary_history_list";
+const MAX_HISTORY_ITEMS = 30;
 
 export const getHistoryList = (): SavedItineraryItem[] => {
   if (typeof window === "undefined") return [];
@@ -13,29 +14,36 @@ export const getHistoryList = (): SavedItineraryItem[] => {
   }
 };
 
-export const saveToHistory = (item: SavedItineraryItem): SavedItineraryItem[] => {
+export const saveToHistory = (
+  item: SavedItineraryItem,
+): SavedItineraryItem[] => {
   if (typeof window === "undefined") return [];
-  try {
-    const current = getHistoryList();
-    const filtered = current.filter((i) => i.id !== item.id);
-    const updated = [item, ...filtered];
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
-    return updated;
-  } catch (e) {
-    console.error("Failed to save itinerary to history:", e);
-    return getHistoryList();
+  const others = getHistoryList().filter((i) => i.id !== item.id);
+  let updated = [item, ...others].slice(0, MAX_HISTORY_ITEMS);
+  while (updated.length > 0) {
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+      return updated;
+    } catch (e) {
+      if (updated.length === 1) {
+        console.error("Failed to save itinerary to history:", e);
+        break;
+      }
+      updated = updated.slice(0, -1);
+    }
   }
+  return getHistoryList();
 };
 
 export const updateHistoryItemSavedToDb = (
   id: string,
-  savedToDb: boolean = true
+  savedToDb: boolean = true,
 ): SavedItineraryItem[] => {
   if (typeof window === "undefined") return [];
   try {
     const current = getHistoryList();
     const updated = current.map((item) =>
-      item.id === id ? { ...item, savedToDb } : item
+      item.id === id ? { ...item, savedToDb } : item,
     );
     localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
     return updated;

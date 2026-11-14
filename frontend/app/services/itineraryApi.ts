@@ -18,14 +18,17 @@ export interface StreamItineraryPayload {
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
+export const apiHeaders = (extra: Record<string, string> = {}) => ({
+  "X-Api-Key": process.env.NEXT_PUBLIC_API_KEY || "dev-local-key",
+  ...extra,
+});
+
 export async function saveItineraryToDatabase(
   payload: SaveItineraryPayload,
 ): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/itineraries`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: apiHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(payload),
   });
 
@@ -37,6 +40,27 @@ export async function saveItineraryToDatabase(
   }
 }
 
+function extractSseText(lines: string[]): string {
+  let text = "";
+  for (const rawLine of lines) {
+    const line = rawLine.endsWith("\r") ? rawLine.slice(0, -1) : rawLine;
+    if (line.startsWith("data:")) {
+      const content = line.slice(5);
+      if (content !== "[DONE]") {
+        text += content;
+      }
+    } else if (
+      !line.startsWith("event:") &&
+      !line.startsWith("id:") &&
+      !line.startsWith("retry:") &&
+      line.length > 0
+    ) {
+      text += line;
+    }
+  }
+  return text;
+}
+
 export async function streamItinerary(
   payload: StreamItineraryPayload,
   signal: AbortSignal,
@@ -44,10 +68,10 @@ export async function streamItinerary(
 ): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/itinerary/stream`, {
     method: "POST",
-    headers: {
+    headers: apiHeaders({
       "Content-Type": "application/json",
       Accept: "text/event-stream, application/json, text/plain",
-    },
+    }),
     body: JSON.stringify(payload),
     signal,
   });
@@ -74,51 +98,15 @@ export async function streamItinerary(
     const lines = buffer.split("\n");
     buffer = lines.pop() ?? "";
 
-    let textChunk = "";
-    for (const rawLine of lines) {
-      const line = rawLine.endsWith("\r") ? rawLine.slice(0, -1) : rawLine;
-      if (line.startsWith("data:")) {
-        const content = line.slice(5);
-        if (content !== "[DONE]") {
-          textChunk += content;
-        }
-      } else if (
-        !line.startsWith("event:") &&
-        !line.startsWith("id:") &&
-        !line.startsWith("retry:") &&
-        line.length > 0
-      ) {
-        textChunk += line;
-      }
-    }
-
+    const textChunk = extractSseText(lines);
     if (textChunk) {
       onChunk(textChunk);
     }
   }
 
   buffer += decoder.decode();
-  if (buffer.length > 0) {
-    const lines = buffer.split("\n");
-    let textChunk = "";
-    for (const rawLine of lines) {
-      const line = rawLine.endsWith("\r") ? rawLine.slice(0, -1) : rawLine;
-      if (line.startsWith("data:")) {
-        const content = line.slice(5);
-        if (content !== "[DONE]") {
-          textChunk += content;
-        }
-      } else if (
-        !line.startsWith("event:") &&
-        !line.startsWith("id:") &&
-        !line.startsWith("retry:") &&
-        line.length > 0
-      ) {
-        textChunk += line;
-      }
-    }
-    if (textChunk) {
-      onChunk(textChunk);
-    }
+  const textChunk = extractSseText(buffer.split("\n"));
+  if (textChunk) {
+    onChunk(textChunk);
   }
 }

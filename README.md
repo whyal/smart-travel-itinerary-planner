@@ -2,7 +2,7 @@
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
-![Java](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)
+![Java](https://img.shields.io/badge/Java-25-ED8B00?logo=openjdk&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.1-6DB33F?logo=springboot&logoColor=white)
 ![Spring AI](https://img.shields.io/badge/Spring_AI-2.0-6DB33F?logo=spring&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-pgvector-4169E1?logo=postgresql&logoColor=white)
@@ -76,7 +76,7 @@ smart-travel-itinerary-planner/
 ├── frontend/             # Next.js 16 (React 19, Tailwind CSS v4, TypeScript)
 │   ├── app/              # App Router, components, SSE stream parser, services
 │   └── README.md         # Frontend developer guide
-├── backend/              # Spring Boot 4 + Spring AI 2.0 (Java 21)
+├── backend/              # Spring Boot 4 + Spring AI 2.0 (Java 25)
 │   ├── src/              # Controllers, services, embedding config, repositories
 │   └── README.md         # Backend developer guide
 ├── docs/                 # Centralized documentation

@@ -88,7 +88,7 @@ Switching embedding models requires **zero code changes or recompilation**. Foll
    - Start or restart the Spring Boot backend (`./gradlew bootRun`).
    - The backend automatically selects the target table (`vector_store_{provider}_{dimensions}`) and sets the proper index (HNSW for $\le 2000$ dims).
 4. **Step 4: Ingest Knowledge Documents for the New Vector Space**
-   - Because embeddings from different models inhabit distinct vector spaces, upload/preload documents into the newly selected table (see [Section 5: Document Ingestion Guide](#5-document-ingestion--knowledge-api-guide)).
+   - Because embeddings from different models inhabit distinct vector spaces, upload documents into the newly selected table (see [Section 5: Document Ingestion Guide](#5-document-ingestion--knowledge-api-guide)).
 5. **Step 5: Verify Active Status**
    - Check `GET /api/knowledge/status` to confirm the active provider, model, dimensions, and table name.
 
@@ -236,14 +236,6 @@ curl -X POST "http://localhost:8080/api/knowledge/upload" \
 curl -X POST "http://localhost:8080/api/knowledge/upload" \
   -F "file=@/path/to/tokyo_knowledge.json" \
   -F "destination=Tokyo"
-```
-
-### D. Preloaded Destination Ingestion (`POST /api/knowledge/preload`)
-
-Trigger ingestion of bundled dataset files packaged in the backend classpath (located under `classpath:data/{destination}/{destination}_travel_knowledge.json`).
-
-```bash
-curl -X POST "http://localhost:8080/api/knowledge/preload?destination=Kyoto"
 ```
 
 ## 6. Configuration Reference (`application.yaml`)

@@ -2,7 +2,6 @@ package com.yonglun.itineraryassistant.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yonglun.itineraryassistant.dto.CustomIngestionRequest;
-import com.yonglun.itineraryassistant.dto.DocumentBatchIngestionRequest;
 import com.yonglun.itineraryassistant.dto.TravelDocumentDto;
 import com.yonglun.itineraryassistant.service.IngestionService;
 import org.junit.jupiter.api.BeforeEach;
@@ -88,33 +87,6 @@ class KnowledgeControllerTest {
     }
 
     @Test
-    void testIngestBatchEndpoint() throws Exception {
-        TravelDocumentDto doc = new TravelDocumentDto(
-                "doc-2",
-                "Paris",
-                "Louvre",
-                "museum",
-                "1st Arr.",
-                "Art museum",
-                List.of("art"),
-                "3 hours",
-                "Evening",
-                Map.of()
-        );
-        DocumentBatchIngestionRequest batch = new DocumentBatchIngestionRequest("Paris", List.of(doc));
-
-        when(ingestionService.ingestDocuments(anyList(), eq("Paris"))).thenReturn(1);
-
-        mockMvc.perform(post("/api/knowledge/batch")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(batch)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status", is("success")))
-                .andExpect(jsonPath("$.destination", is("Paris")))
-                .andExpect(jsonPath("$.documentsIngested", is(1)));
-    }
-
-    @Test
     void testIngestArticlesEndpoint() throws Exception {
         CustomIngestionRequest request = new CustomIngestionRequest(
                 "Seoul",
@@ -164,30 +136,6 @@ class KnowledgeControllerTest {
                         .file(file))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status", is("error")));
-    }
-
-    @Test
-    void testPreloadEndpoint() throws Exception {
-        when(ingestionService.ingestPreloadedKnowledge(eq("Kyoto"), any())).thenReturn(10);
-
-        mockMvc.perform(post("/api/knowledge/preload")
-                        .param("destination", "Kyoto"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status", is("success")))
-                .andExpect(jsonPath("$.destination", is("Kyoto")))
-                .andExpect(jsonPath("$.documentsIngested", is(10)));
-    }
-
-    @Test
-    void testPreloadEndpointWhenNoFilesFound() throws Exception {
-        when(ingestionService.ingestPreloadedKnowledge(eq("Kyoto"), any())).thenReturn(0);
-
-        mockMvc.perform(post("/api/knowledge/preload")
-                        .param("destination", "Kyoto"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status", is("not_found")))
-                .andExpect(jsonPath("$.destination", is("Kyoto")))
-                .andExpect(jsonPath("$.documentsIngested", is(0)));
     }
 
     @Test

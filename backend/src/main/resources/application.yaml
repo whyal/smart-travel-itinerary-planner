@@ -35,6 +35,11 @@ spring:
       embedding:
         options:
           model: ${EMBEDDING_MODEL:Qwen/Qwen3-Embedding-0.6B}
+    chat:
+      memory:
+        repository:
+          jdbc:
+            initialize-schema: always
     vectorstore:
       pgvector:
         initialize-schema: true
@@ -42,6 +47,10 @@ spring:
         schema-name: public
 
 app:
+  security:
+    api-key: ${API_KEY:dev-local-key}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
   chat:
     provider: ${CHAT_PROVIDER:${EMBEDDING_PROVIDER:google}}
   vectorstore:

@@ -7,7 +7,6 @@ jest.mock("../../services/knowledgeApi", () => ({
   getKnowledgeStatus: jest.fn(),
   uploadKnowledgeFile: jest.fn(),
   ingestKnowledgeArticles: jest.fn(),
-  preloadKnowledge: jest.fn(),
   searchKnowledge: jest.fn(),
 }));
 

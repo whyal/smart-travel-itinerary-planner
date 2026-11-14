@@ -51,22 +51,6 @@ public class KnowledgeController {
         ));
     }
 
-        @Deprecated
-    @PostMapping(value = "/batch", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<IngestionResponse> ingestBatch(@RequestBody DocumentBatchIngestionRequest request) {
-        if (request == null || request.documents() == null || request.documents().isEmpty()) {
-            return ResponseEntity.badRequest().body(new IngestionResponse(
-                    "error", "Request documents list cannot be empty.", request != null ? request.destination() : null, 0
-            ));
-        }
-
-        int count = ingestionService.ingestDocuments(request.documents(), request.destination());
-        return ResponseEntity.ok(new IngestionResponse(
-                "success", "Successfully embedded and ingested " + count + " structured documents for destination [" + request.destination() + "].",
-                request.destination(), count
-        ));
-    }
-
         @PostMapping(value = "/articles", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<IngestionResponse> ingestArticles(@RequestBody CustomIngestionRequest request) {
         if (request == null || request.articles() == null || request.articles().isEmpty()) {
@@ -107,25 +91,7 @@ public class KnowledgeController {
         }
     }
 
-    @PostMapping("/preload")
-    public ResponseEntity<IngestionResponse> preloadKnowledge(
-            @RequestParam(defaultValue = "Kyoto") String destination,
-            @RequestParam(required = false) String resourcePath) {
-
-        int count = ingestionService.ingestPreloadedKnowledge(destination, resourcePath);
-        if (count == 0) {
-            return ResponseEntity.ok(new IngestionResponse(
-                    "not_found", "No preloaded knowledge files found for destination [" + destination + "]. The assistant will rely on model knowledge or user-ingested documents.",
-                    destination, 0
-            ));
-        }
-        return ResponseEntity.ok(new IngestionResponse(
-                "success", "Successfully preloaded and ingested " + count + " documents for destination [" + destination + "].",
-                destination, count
-        ));
-    }
-
-    @GetMapping({"/status", "/stats"})
+    @GetMapping("/status")
     public ResponseEntity<RagStatusResponse> getStatus() {
         return ResponseEntity.ok(new RagStatusResponse(
                 "ready",
@@ -139,7 +105,7 @@ public class KnowledgeController {
         ));
     }
 
-    @GetMapping({"/similarity-search", "/search"})
+    @GetMapping("/similarity-search")
     public ResponseEntity<List<RagDocumentResponse>> searchKnowledge(
             @RequestParam String query,
             @RequestParam(defaultValue = "4") int topK) {

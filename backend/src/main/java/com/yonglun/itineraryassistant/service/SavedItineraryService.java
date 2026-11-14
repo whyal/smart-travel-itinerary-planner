@@ -8,6 +8,8 @@ import com.yonglun.itineraryassistant.dto.SavedItineraryResponse;
 import com.yonglun.itineraryassistant.entity.SavedItinerary;
 import com.yonglun.itineraryassistant.model.Itinerary;
 import com.yonglun.itineraryassistant.repository.SavedItineraryRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +19,8 @@ import java.util.Optional;
 
 @Service
 public class SavedItineraryService {
+
+    private static final Logger log = LoggerFactory.getLogger(SavedItineraryService.class);
 
     private final SavedItineraryRepository repository;
     private final ObjectMapper objectMapper;
@@ -90,7 +94,7 @@ public class SavedItineraryService {
         try {
             return sanitizeText(objectMapper.writeValueAsString(value));
         } catch (JsonProcessingException e) {
-            return "{}";
+            throw new IllegalStateException("Could not serialize itinerary data for saving", e);
         }
     }
 
@@ -103,6 +107,7 @@ public class SavedItineraryService {
         try {
             return objectMapper.readValue(json, clazz);
         } catch (JsonProcessingException e) {
+            log.warn("Stored itinerary JSON could not be read as {}: {}", clazz.getSimpleName(), e.getMessage());
             return null;
         }
     }

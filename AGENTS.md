@@ -8,7 +8,7 @@ This document serves as the universal, agent-agnostic entrypoint for any AI codi
 
 ```
 smart-travel-itinerary-planner/
-├── backend/          # Spring Boot 4 + Spring AI 2.0 (Java 21)
+├── backend/          # Spring Boot 4 + Spring AI 2.0 (Java 25)
 ├── frontend/         # Next.js 16 App Router + React 19 + Tailwind CSS v4 (TypeScript)
 ├── docs/             # Central documentation (QUICKSTART.md, EMBEDDINGS.md, API.md)
 └── AGENTS.md         # Root instruction and boundary definition

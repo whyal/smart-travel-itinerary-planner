@@ -4,33 +4,35 @@ This document provides the complete API reference for the AI Travel Itinerary Pl
 
 All endpoints accept and return JSON unless explicitly specified otherwise (such as Server-Sent Events or file uploads).
 
+## Authentication
+
+Every `/api/**` request must send an `X-Api-Key` header matching the backend `API_KEY` environment variable (default `dev-local-key`). The frontend reads it from `NEXT_PUBLIC_API_KEY`. Requests without it get `401`. For `curl`, add `-H "X-Api-Key: $API_KEY"`.
+
 ## Endpoint Summary
 
 | Category | Method | Path | Description |
 | :--- | :--- | :--- | :--- |
-| **Itinerary** | `POST` | `/api/itinerary/generate` | Synchronous structured JSON itinerary generation. |
 | **Itinerary** | `POST` | `/api/itinerary/stream` | Server-Sent Events (SSE) token streaming for real-time progressive UI rendering. |
 | **Persistence** | `GET` | `/api/itineraries` | Retrieve all saved itineraries. |
 | **Persistence** | `POST` | `/api/itineraries` | Save an itinerary and its metadata to PostgreSQL. |
 | **Persistence** | `GET` | `/api/itineraries/{id}` | Retrieve a saved itinerary by its ID. |
 | **Persistence** | `DELETE` | `/api/itineraries/{id}` | Delete a saved itinerary by its ID. |
 | **Knowledge** | `POST` | `/api/knowledge/documents` | Ingest structured travel documents with metadata into vector space. |
-| **Knowledge** | `POST` | `/api/knowledge/batch` | Batch ingest structured travel documents across multiple destinations. |
 | **Knowledge** | `POST` | `/api/knowledge/articles` | Ingest raw travel text/articles into vector space. |
 | **Knowledge** | `POST` | `/api/knowledge/upload` | Multipart file upload (`.pdf`, `.json`, `.txt`, `.md`). |
-| **Knowledge** | `POST` | `/api/knowledge/preload` | Preload bundled classpath datasets (e.g., Kyoto). |
 | **Knowledge** | `GET` | `/api/knowledge/status` | Ingestion statistics, active embedding model, and vector table name. |
 | **Knowledge** | `GET` | `/api/knowledge/similarity-search` | Test vector similarity search directly without generating an itinerary. |
 
 ## 1. Itinerary Generation Endpoints
 
-### A. Synchronous Generation (`POST /api/itinerary/generate`)
+### A. Streaming Generation (`POST /api/itinerary/stream`)
 
-Generates a fully formed structured JSON itinerary in a single synchronous response.
+Streams generated tokens as Server-Sent Events (`text/event-stream`). The client assembles the chunks into the final itinerary JSON.
 
 #### Request Headers
 ```http
 Content-Type: application/json
+Accept: text/event-stream
 ```
 
 #### Request Body
@@ -41,54 +43,8 @@ Content-Type: application/json
 }
 ```
 
-- `prompt` *(string, required)*: User prompt containing destination and preferences.
-- `conversationId` *(string, optional)*: UUID tracking multi-turn chat history. If omitted, no history is retained.
-
-#### Response (`200 OK`)
-```json
-{
-  "destination": "Kyoto",
-  "summary": "A 3-day exploration of Kyoto's historic temples, serene gardens, and traditional culinary scenes.",
-  "estimatedBudget": "Moderate",
-  "travelPace": "Moderate",
-  "days": [
-    {
-      "dayNumber": 1,
-      "theme": "Historic Higashiyama & Gion",
-      "activities": [
-        {
-          "timeSlot": "Morning",
-          "title": "Kiyomizu-dera Temple",
-          "description": "Walk through the wooden stage overlooking Kyoto.",
-          "location": "Higashiyama",
-          "duration": "2 hours"
-        }
-      ],
-      "dining": [
-        {
-          "meal": "Lunch",
-          "recommendation": "Gion Karyo",
-          "cuisine": "Traditional Kaiseki",
-          "location": "Gion"
-        }
-      ]
-    }
-  ]
-}
-```
-
-### B. Streaming Generation (`POST /api/itinerary/stream`)
-
-Streams generated tokens as Server-Sent Events (`text/event-stream`). Enables progressive client-side rendering.
-
-#### Request Headers
-```http
-Content-Type: application/json
-Accept: text/event-stream
-```
-
-#### Request Body
-Same schema as `POST /api/itinerary/generate`.
+- `prompt` *(string, required)*: User prompt containing destination and preferences. Missing or blank returns `400`.
+- `conversationId` *(string, required)*: UUID tracking multi-turn chat history, stored in the database. Missing or blank returns `400`.
 
 #### Response Stream (`200 OK`)
 ```http
@@ -221,6 +177,7 @@ Uploads documents via `multipart/form-data`. Automatically handles format-specif
 - `.pdf`: Page-by-page token splitting.
 - `.json`: Structured array parsing.
 - `.txt`, `.md`: Paragraph splitting by blank lines.
+- Any other file type returns `400`.
 
 ```bash
 curl -X POST "http://localhost:8080/api/knowledge/upload" \
@@ -228,17 +185,9 @@ curl -X POST "http://localhost:8080/api/knowledge/upload" \
   -F "destination=Kyoto"
 ```
 
-### D. Preload Bundled Knowledge (`POST /api/knowledge/preload`)
+### D. Check Knowledge Status (`GET /api/knowledge/status`)
 
-Ingests prepackaged classpath datasets into the active vector table.
-
-```bash
-curl -X POST "http://localhost:8080/api/knowledge/preload?destination=Kyoto"
-```
-
-### E. Check Knowledge Status (`GET /api/knowledge/status`)
-
-Returns real-time ingestion counts, active provider, model dimensions, and target vector table.
+Returns ingestion counts (rebuilt from the vector table at startup), active provider, model dimensions, and target vector table.
 
 #### Response (`200 OK`)
 ```json
@@ -263,7 +212,7 @@ Runs a semantic vector query directly without calling the chat generation model.
 
 #### Query Parameters
 - `query` *(string, required)*: Search phrase (e.g., `zen gardens with stone paths`).
-- `topK` *(integer, optional, default: 4)*: Maximum number of retrieved document chunks.
+- `topK` *(integer, optional, default: 4)*: Maximum number of retrieved document chunks. Values are clamped to 1-20.
 
 #### Response (`200 OK`)
 ```json
@@ -291,7 +240,7 @@ When an error occurs, the backend returns a standardized `ApiErrorResponse` payl
   "status": 400,
   "error": "Bad Request",
   "message": "Prompt must not be empty.",
-  "path": "/api/itinerary/generate"
+  "path": "/api/itinerary/stream"
 }
 ```
 

@@ -82,14 +82,25 @@ describe("ItineraryForm Component", () => {
     it("submits form data, sends POST request to API, and streams formatted itinerary text", async () => {
       const user = userEvent.setup();
 
-      const sampleSseChunk1 = "data: Day 1: Kyoto Exploration\n";
-      const sampleSseChunk2 =
-        "data: (9:00 AM) Kinkaku-ji Temple - Visit Golden Pavilion\n";
+      const sampleJson = JSON.stringify({
+        destination: "Kyoto",
+        days: [
+          {
+            dayNumber: 1,
+            theme: "Kyoto Exploration",
+            activities: [
+              {
+                time: "09:00 AM",
+                location: "Kinkaku-ji Temple",
+                description: "Visit Golden Pavilion",
+              },
+            ],
+          },
+        ],
+      });
 
-      const mockReader = createMockStreamReader([
-        sampleSseChunk1,
-        sampleSseChunk2,
-      ]);
+      const mockReader = createMockStreamReader([`data: ${sampleJson}
+`]);
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         body: { getReader: () => mockReader },
@@ -144,6 +155,29 @@ describe("ItineraryForm Component", () => {
       });
 
       consoleErrorSpy.mockRestore();
+    });
+
+    it("shows an error and saves nothing when the stream is not a valid itinerary", async () => {
+      const user = userEvent.setup();
+      const mockReader = createMockStreamReader([
+        'data: {"destination":"Osaka","days":[{"dayNumber":1,"activities":[{"time":"09:00 AM","loc\n',
+      ]);
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        body: { getReader: () => mockReader },
+      });
+
+      render(<ItineraryForm />);
+      await user.click(
+        screen.getByRole("button", { name: /generate streamed itinerary/i }),
+      );
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(/incomplete or not a valid itinerary/i),
+        ).toBeInTheDocument();
+      });
+      expect(localStorage.getItem("itinerary_history_list")).toBeNull();
     });
 
     it("handles network failure during submission", async () => {

@@ -23,5 +23,9 @@ spring:
           api-key: test-key
 
 app:
+  security:
+    api-key: test-api-key
+  cors:
+    allowed-origins: http://localhost:3000
   vectorstore:
     type: simple

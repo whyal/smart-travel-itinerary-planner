@@ -23,9 +23,6 @@ import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.DefaultResourceLoader;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.io.ByteArrayOutputStream;
@@ -37,6 +34,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -45,24 +43,19 @@ class IngestionServiceTest {
     @Mock
     private VectorStore vectorStore;
 
-    @Mock
-    private ResourceLoader mockResourceLoader;
-
     @Captor
     private ArgumentCaptor<List<Document>> documentsCaptor;
 
     @Captor
     private ArgumentCaptor<SearchRequest> searchRequestCaptor;
 
-    private ResourceLoader resourceLoader;
     private ObjectMapper objectMapper;
     private IngestionService ingestionService;
 
     @BeforeEach
     void setUp() {
-        resourceLoader = new DefaultResourceLoader();
         objectMapper = new ObjectMapper();
-        ingestionService = new IngestionService(vectorStore, resourceLoader, objectMapper);
+        ingestionService = new IngestionService(vectorStore, objectMapper);
     }
 
     @Nested
@@ -97,11 +90,11 @@ class IngestionServiceTest {
                     Map.of()
             );
 
-            int count = ingestionService.ingestDocuments(List.of(doc1, doc2));
+            int count = ingestionService.ingestDocuments(List.of(doc1, doc2), null);
 
             assertThat(count).isEqualTo(2);
             assertThat(ingestionService.getIngestedDocumentCount()).isEqualTo(2);
-            assertThat(ingestionService.isDestinationIngested("Paris")).isTrue();
+            assertThat(ingestionService.getIngestedDestinations()).contains("Paris");
             assertThat(ingestionService.getIngestedDestinations()).containsExactly("Paris");
             assertThat(ingestionService.getDestinationDocumentCounts()).containsEntry("Paris", 2);
 
@@ -168,7 +161,7 @@ class IngestionServiceTest {
             int count = ingestionService.ingestDocuments(List.of(doc), "London");
 
             assertThat(count).isEqualTo(1);
-            assertThat(ingestionService.isDestinationIngested("London")).isTrue();
+            assertThat(ingestionService.getIngestedDestinations()).contains("London");
 
             verify(vectorStore, times(1)).add(documentsCaptor.capture());
             List<Document> captured = documentsCaptor.getValue();
@@ -209,7 +202,7 @@ class IngestionServiceTest {
             int count = ingestionService.ingestDocuments(List.of(doc), "  ");
 
             assertThat(count).isEqualTo(1);
-            assertThat(ingestionService.isDestinationIngested("General")).isTrue();
+            assertThat(ingestionService.getIngestedDestinations()).contains("General");
 
             verify(vectorStore, times(1)).add(documentsCaptor.capture());
             Document capturedDoc = documentsCaptor.getValue().get(0);
@@ -303,7 +296,7 @@ class IngestionServiceTest {
                     Map.of("note\u0000", "popular\u0000 attraction")
             );
 
-            int count = ingestionService.ingestDocuments(List.of(doc));
+            int count = ingestionService.ingestDocuments(List.of(doc), null);
 
             assertThat(count).isEqualTo(1);
             verify(vectorStore, times(1)).add(documentsCaptor.capture());
@@ -337,7 +330,7 @@ class IngestionServiceTest {
             int count = ingestionService.ingestDestinationKnowledge(rawArticles, "Osaka");
 
             assertThat(count).isEqualTo(2);
-            assertThat(ingestionService.isDestinationIngested("Osaka")).isTrue();
+            assertThat(ingestionService.getIngestedDestinations()).contains("Osaka");
             assertThat(ingestionService.getIngestedDocumentCount()).isEqualTo(2);
 
             verify(vectorStore, times(1)).add(documentsCaptor.capture());
@@ -365,7 +358,7 @@ class IngestionServiceTest {
             int count = ingestionService.ingestDestinationKnowledge(List.of("Exploring the world"), destination);
 
             assertThat(count).isEqualTo(1);
-            assertThat(ingestionService.isDestinationIngested("General")).isTrue();
+            assertThat(ingestionService.getIngestedDestinations()).contains("General");
 
             verify(vectorStore, times(1)).add(documentsCaptor.capture());
             Document doc = documentsCaptor.getValue().get(0);
@@ -462,7 +455,7 @@ class IngestionServiceTest {
             int count = ingestionService.ingestFile(file, "Tokyo");
 
             assertThat(count).isEqualTo(1);
-            assertThat(ingestionService.isDestinationIngested("Tokyo")).isTrue();
+            assertThat(ingestionService.getIngestedDestinations()).contains("Tokyo");
 
             verify(vectorStore, times(1)).add(documentsCaptor.capture());
             List<Document> docs = documentsCaptor.getValue();
@@ -533,7 +526,7 @@ class IngestionServiceTest {
             int count = ingestionService.ingestFile(file, "Fallback");
 
             assertThat(count).isEqualTo(1);
-            assertThat(ingestionService.isDestinationIngested("Seoul")).isTrue();
+            assertThat(ingestionService.getIngestedDestinations()).contains("Seoul");
 
             verify(vectorStore, times(1)).add(documentsCaptor.capture());
             Document doc = documentsCaptor.getValue().get(0);
@@ -564,7 +557,7 @@ class IngestionServiceTest {
             int count = ingestionService.ingestFile(file, "Fallback");
 
             assertThat(count).isEqualTo(2);
-            assertThat(ingestionService.isDestinationIngested("Busan")).isTrue();
+            assertThat(ingestionService.getIngestedDestinations()).contains("Busan");
 
             verify(vectorStore, times(1)).add(documentsCaptor.capture());
             List<Document> docs = documentsCaptor.getValue();
@@ -621,7 +614,7 @@ class IngestionServiceTest {
             int count = ingestionService.ingestFile(file, "Rome");
 
             assertThat(count).isEqualTo(2);
-            assertThat(ingestionService.isDestinationIngested("Rome")).isTrue();
+            assertThat(ingestionService.getIngestedDestinations()).contains("Rome");
 
             verify(vectorStore, times(1)).add(documentsCaptor.capture());
             List<Document> docs = documentsCaptor.getValue();
@@ -661,7 +654,7 @@ class IngestionServiceTest {
             int count = ingestionService.ingestFile(file, "Barcelona");
 
             assertThat(count).isGreaterThan(0);
-            assertThat(ingestionService.isDestinationIngested("Barcelona")).isTrue();
+            assertThat(ingestionService.getIngestedDestinations()).contains("Barcelona");
 
             verify(vectorStore, times(1)).add(documentsCaptor.capture());
             List<Document> capturedDocs = documentsCaptor.getValue();
@@ -753,108 +746,6 @@ class IngestionServiceTest {
     }
 
     @Nested
-    @DisplayName("ingestResource & ingestPreloadedKnowledge")
-    class IngestResourceTests {
-
-        @Test
-        @DisplayName("Happy path: ingestResource reads valid JSON resource and stores documents")
-        void testIngestResource_ValidResource() {
-            String jsonContent = """
-                    [
-                      {
-                        "id": "kyoto-kinkakuji",
-                        "destination": "Kyoto",
-                        "title": "Kinkaku-ji",
-                        "category": "temple",
-                        "content": "Zen Buddhist temple covered in gold leaf."
-                      }
-                    ]
-                    """;
-            Resource validResource = new ByteArrayResource(jsonContent.getBytes(StandardCharsets.UTF_8)) {
-                @Override
-                public boolean exists() {
-                    return true;
-                }
-            };
-
-            int count = ingestionService.ingestResource(validResource, "Kyoto");
-
-            assertThat(count).isEqualTo(1);
-            assertThat(ingestionService.isDestinationIngested("Kyoto")).isTrue();
-
-            verify(vectorStore, times(1)).add(documentsCaptor.capture());
-            Document doc = documentsCaptor.getValue().get(0);
-            assertThat(doc.getId()).isEqualTo("kyoto-kinkakuji");
-            assertThat(doc.getText()).contains("Kinkaku-ji");
-            assertThat(doc.getMetadata()).containsEntry("destination", "Kyoto");
-        }
-
-        @Test
-        @DisplayName("Unhappy/Edge path: Null or non-existent resource returns 0 without calling vectorStore")
-        void testIngestResource_NonExistentResource() {
-            Resource nonExistentResource = mock(Resource.class);
-            when(nonExistentResource.exists()).thenReturn(false);
-
-            int countNull = ingestionService.ingestResource(null, "Kyoto");
-            int countNonExistent = ingestionService.ingestResource(nonExistentResource, "Kyoto");
-
-            assertThat(countNull).isZero();
-            assertThat(countNonExistent).isZero();
-            verifyNoInteractions(vectorStore);
-        }
-
-        @Test
-        @DisplayName("Unhappy path: Ingest resource throwing IOException wrapped in RuntimeException")
-        void testIngestResource_IOException_ThrowsRuntimeException() throws Exception {
-            Resource failingResource = mock(Resource.class);
-            when(failingResource.exists()).thenReturn(true);
-            when(failingResource.getInputStream()).thenThrow(new IOException("Simulated disk error"));
-
-            RuntimeException ex = assertThrows(RuntimeException.class,
-                    () -> ingestionService.ingestResource(failingResource, "Kyoto"));
-
-            assertThat(ex.getMessage()).contains("Knowledge ingestion failed");
-            verifyNoInteractions(vectorStore);
-        }
-
-        @Test
-        @DisplayName("Happy path: ingestPreloadedKnowledge resolves resource path and ingests correctly")
-        void testIngestPreloadedKnowledge_CustomAndDefaultPath() {
-            IngestionService customService = new IngestionService(vectorStore, mockResourceLoader, objectMapper);
-
-            String jsonContent = """
-                    [
-                      {
-                        "id": "tokyo-skytree",
-                        "title": "Tokyo Skytree",
-                        "content": "Broadcasting and observation tower."
-                      }
-                    ]
-                    """;
-            Resource mockRes = new ByteArrayResource(jsonContent.getBytes(StandardCharsets.UTF_8)) {
-                @Override
-                public boolean exists() {
-                    return true;
-                }
-            };
-
-            when(mockResourceLoader.getResource("classpath:data/tokyo/tokyo_travel_knowledge.json"))
-                    .thenReturn(mockRes);
-
-            int count = customService.ingestPreloadedKnowledge("Tokyo", null);
-
-            assertThat(count).isEqualTo(1);
-            assertThat(customService.isDestinationIngested("Tokyo")).isTrue();
-
-            verify(mockResourceLoader).getResource("classpath:data/tokyo/tokyo_travel_knowledge.json");
-            verify(vectorStore, times(1)).add(documentsCaptor.capture());
-            Document doc = documentsCaptor.getValue().get(0);
-            assertThat(doc.getId()).isEqualTo("tokyo-skytree");
-            assertThat(doc.getMetadata()).containsEntry("destination", "Tokyo");
-        }
-    }
-
-    @Nested
     @DisplayName("similaritySearch")
     class SimilaritySearchTests {
 
@@ -899,28 +790,76 @@ class IngestionServiceTest {
     }
 
     @Nested
-    @DisplayName("State and destination inquiry methods")
-    class StateQueryTests {
+    @DisplayName("Document counts, concurrency and input guards")
+    class CountsAndGuardsTests {
 
-        @ParameterizedTest
-        @NullAndEmptySource
-        @ValueSource(strings = {"   ", "UnknownCity"})
-        @DisplayName("Edge case: isDestinationIngested returns false for null, blank, or unknown destinations")
-        void testIsDestinationIngested_ReturnsFalseForUnregistered(String destination) {
-            assertThat(ingestionService.isDestinationIngested(destination)).isFalse();
+        @Test
+        @DisplayName("Re-ingesting the same document does not inflate counts")
+        void testReingestSameDocumentKeepsCountStable() {
+            TravelDocumentDto doc = new TravelDocumentDto("doc-1", "Kyoto", "Kinkaku-ji", null, null, "Golden pavilion", null, null, null, null);
+
+            ingestionService.ingestDocuments(List.of(doc), null);
+            ingestionService.ingestDocuments(List.of(doc), null);
+
+            assertThat(ingestionService.getIngestedDocumentCount()).isEqualTo(1);
+            assertThat(ingestionService.getDestinationDocumentCounts()).containsEntry("Kyoto", 1);
         }
 
         @Test
-        @DisplayName("Happy path: Destination lookup is case-insensitive")
-        void testIsDestinationIngested_CaseInsensitive() {
-            TravelDocumentDto doc = new TravelDocumentDto(
-                    "rome-1", "Rome", "Colosseum", "attraction", null, "Ancient arena", null, null, null, null
-            );
-            ingestionService.ingestDocuments(List.of(doc));
+        @DisplayName("restoreDocumentIndex repopulates counts after restart without overwriting live entries")
+        void testRestoreDocumentIndex() {
+            ingestionService.restoreDocumentIndex(Map.of("a", "Kyoto", "b", "Kyoto", "c", "Osaka"));
 
-            assertThat(ingestionService.isDestinationIngested("rome")).isTrue();
-            assertThat(ingestionService.isDestinationIngested("ROME")).isTrue();
-            assertThat(ingestionService.isDestinationIngested(" RoMe ")).isTrue();
+            assertThat(ingestionService.getIngestedDocumentCount()).isEqualTo(3);
+            assertThat(ingestionService.getDestinationDocumentCounts()).containsEntry("Kyoto", 2).containsEntry("Osaka", 1);
+            assertThat(ingestionService.getIngestedDestinations()).contains("Osaka");
+        }
+
+        @Test
+        @DisplayName("A slow ingestion does not block other ingestions")
+        void testIngestionsRunConcurrently() throws Exception {
+            java.util.concurrent.CountDownLatch firstStarted = new java.util.concurrent.CountDownLatch(1);
+            java.util.concurrent.CountDownLatch releaseFirst = new java.util.concurrent.CountDownLatch(1);
+            doAnswer(inv -> {
+                firstStarted.countDown();
+                releaseFirst.await(5, java.util.concurrent.TimeUnit.SECONDS);
+                return null;
+            }).doNothing().when(vectorStore).add(anyList());
+
+            var executor = java.util.concurrent.Executors.newFixedThreadPool(2);
+            try {
+                var slow = executor.submit(() -> ingestionService.ingestDestinationKnowledge(List.of("slow article"), "Kyoto"));
+                assertThat(firstStarted.await(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+                var fast = executor.submit(() -> ingestionService.ingestDestinationKnowledge(List.of("fast article"), "Osaka"));
+
+                assertThat(fast.get(2, java.util.concurrent.TimeUnit.SECONDS)).isEqualTo(1);
+                releaseFirst.countDown();
+                assertThat(slow.get(5, java.util.concurrent.TimeUnit.SECONDS)).isEqualTo(1);
+            } finally {
+                releaseFirst.countDown();
+                executor.shutdownNow();
+            }
+        }
+
+        @Test
+        @DisplayName("Unsupported upload types are rejected instead of decoded as text")
+        void testIngestFileRejectsUnsupportedType() {
+            MockMultipartFile docx = new MockMultipartFile("file", "guide.docx",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document", new byte[]{1, 2, 3});
+
+            assertThrows(IllegalArgumentException.class, () -> ingestionService.ingestFile(docx, "Kyoto"));
+            verifyNoInteractions(vectorStore);
+        }
+
+        @Test
+        @DisplayName("topK is clamped between 1 and 20")
+        void testSimilaritySearchClampsTopK() {
+            when(vectorStore.similaritySearch(searchRequestCaptor.capture())).thenReturn(List.of());
+
+            ingestionService.similaritySearch("temple", 100000);
+            ingestionService.similaritySearch("temple", -5);
+
+            assertThat(searchRequestCaptor.getAllValues()).extracting(SearchRequest::getTopK).containsExactly(20, 1);
         }
     }
 }

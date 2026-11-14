@@ -13,8 +13,6 @@ import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -22,50 +20,42 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 public class IngestionService {
 
     private static final Logger log = LoggerFactory.getLogger(IngestionService.class);
 
+    private static final int MAX_TOP_K = 20;
+
     private final VectorStore vectorStore;
-    private final ResourceLoader resourceLoader;
     private final ObjectMapper objectMapper;
 
-    private final AtomicInteger ingestedDocumentCount = new AtomicInteger(0);
-    private final Map<String, Integer> destinationDocumentCounts = new ConcurrentHashMap<>();
+    private final Map<String, String> destinationByDocumentId = new ConcurrentHashMap<>();
 
-    public IngestionService(VectorStore vectorStore, ResourceLoader resourceLoader, ObjectMapper objectMapper) {
+    public IngestionService(VectorStore vectorStore, ObjectMapper objectMapper) {
         this.vectorStore = vectorStore;
-        this.resourceLoader = resourceLoader;
         this.objectMapper = objectMapper;
     }
 
-    public synchronized int ingestDocuments(List<TravelDocumentDto> items, String defaultDestination) {
+    public int ingestDocuments(List<TravelDocumentDto> items, String defaultDestination) {
         if (items == null || items.isEmpty()) {
             return 0;
         }
 
         List<Document> documents = new ArrayList<>();
-        Map<String, Integer> batchCounts = new HashMap<>();
 
         for (TravelDocumentDto item : items) {
             if (item == null) continue;
             String dest = hasText(item.destination()) ? item.destination().trim()
                     : (hasText(defaultDestination) ? defaultDestination.trim() : "General");
             documents.add(toDocument(item, dest));
-            batchCounts.merge(dest, 1, Integer::sum);
         }
 
-        return recordAndStore(documents, batchCounts);
+        return recordAndStore(documents);
     }
 
-    public synchronized int ingestDocuments(List<TravelDocumentDto> items) {
-        return ingestDocuments(items, null);
-    }
-
-    public synchronized int ingestDestinationKnowledge(List<String> rawArticles, String destination) {
+    public int ingestDestinationKnowledge(List<String> rawArticles, String destination) {
         if (rawArticles == null || rawArticles.isEmpty()) {
             return 0;
         }
@@ -83,10 +73,10 @@ public class IngestionService {
                 ))
                 .toList();
 
-        return recordAndStore(docs, Map.of(dest, docs.size()));
+        return recordAndStore(docs);
     }
 
-    public synchronized int ingestFile(MultipartFile file, String fallbackDestination) throws Exception {
+    public int ingestFile(MultipartFile file, String fallbackDestination) throws Exception {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("File cannot be empty.");
         }
@@ -122,7 +112,7 @@ public class IngestionService {
                     })
                     .toList();
 
-            return recordAndStore(enrichedDocs, Map.of(dest, enrichedDocs.size()));
+            return recordAndStore(enrichedDocs);
         }
 
         if (filename.endsWith(".json") || (file.getContentType() != null && file.getContentType().contains("json"))) {
@@ -156,6 +146,10 @@ public class IngestionService {
             throw new IllegalArgumentException("Unsupported JSON structure for ingestion.");
         }
 
+        if (!filename.endsWith(".txt") && !filename.endsWith(".md")) {
+            throw new IllegalArgumentException("Unsupported file type. Use .pdf, .json, .txt or .md.");
+        }
+
         String rawText = new String(file.getBytes(), StandardCharsets.UTF_8);
         String text = sanitizeText(rawText);
         List<String> articles = Arrays.stream(text.split("(?m)^\\s*$\\n+"))
@@ -166,54 +160,29 @@ public class IngestionService {
         return ingestDestinationKnowledge(articles.isEmpty() ? List.of(text.trim()) : articles, dest);
     }
 
-    public synchronized int ingestResource(Resource resource, String fallbackDestination) {
-        try {
-            if (resource == null || !resource.exists()) {
-                log.warn("Knowledge data resource not found: {}", resource);
-                return 0;
-            }
-
-            try (InputStream is = resource.getInputStream()) {
-                List<TravelDocumentDto> items = objectMapper.readValue(is, new TypeReference<List<TravelDocumentDto>>() {});
-                return ingestDocuments(items, fallbackDestination);
-            }
-        } catch (Exception e) {
-            log.error("Failed to ingest knowledge documents from resource", e);
-            throw new RuntimeException("Knowledge ingestion failed: " + e.getMessage(), e);
-        }
-    }
-
-    public synchronized int ingestPreloadedKnowledge(String destination, String resourcePath) {
-        String dest = hasText(destination) ? destination.trim() : "General";
-        String path = hasText(resourcePath)
-                ? resourcePath
-                : "classpath:data/" + dest.toLowerCase() + "/" + dest.toLowerCase() + "_travel_knowledge.json";
-
-        return ingestResource(resourceLoader.getResource(path), dest);
-    }
-
     public List<Document> similaritySearch(String query, int topK) {
         String cleanQuery = sanitizeText(query);
         return vectorStore.similaritySearch(
-                SearchRequest.builder().query(cleanQuery != null ? cleanQuery : "").topK(Math.max(1, topK)).build()
+                SearchRequest.builder().query(cleanQuery != null ? cleanQuery : "").topK(Math.min(MAX_TOP_K, Math.max(1, topK))).build()
         );
     }
 
-    public boolean isDestinationIngested(String destination) {
-        return hasText(destination) && destinationDocumentCounts.entrySet().stream()
-                .anyMatch(e -> e.getKey().equalsIgnoreCase(destination.trim()) && e.getValue() > 0);
-    }
-
     public int getIngestedDocumentCount() {
-        return ingestedDocumentCount.get();
+        return destinationByDocumentId.size();
     }
 
     public Set<String> getIngestedDestinations() {
-        return Collections.unmodifiableSet(destinationDocumentCounts.keySet());
+        return new TreeSet<>(destinationByDocumentId.values());
     }
 
     public Map<String, Integer> getDestinationDocumentCounts() {
-        return Collections.unmodifiableMap(destinationDocumentCounts);
+        Map<String, Integer> counts = new TreeMap<>();
+        destinationByDocumentId.values().forEach(dest -> counts.merge(dest, 1, Integer::sum));
+        return counts;
+    }
+
+    public void restoreDocumentIndex(Map<String, String> destinationById) {
+        destinationById.forEach((id, dest) -> destinationByDocumentId.putIfAbsent(id, hasText(dest) ? dest.trim() : "General"));
     }
 
     private Document toDocument(TravelDocumentDto item, String destination) {
@@ -264,7 +233,7 @@ public class IngestionService {
         return new Document(docId, sb.toString().trim(), metadata);
     }
 
-    private int recordAndStore(List<Document> docs, Map<String, Integer> counts) {
+    private int recordAndStore(List<Document> docs) {
         if (docs == null || docs.isEmpty()) return 0;
 
         Map<String, Document> uniqueDocsMap = new LinkedHashMap<>();
@@ -280,17 +249,16 @@ public class IngestionService {
         List<Document> uniqueDocs = new ArrayList<>(uniqueDocsMap.values());
 
         vectorStore.add(uniqueDocs);
-        ingestedDocumentCount.addAndGet(uniqueDocs.size());
 
-        Map<String, Integer> uniqueCounts = new HashMap<>();
+        Set<String> destinations = new TreeSet<>();
         for (Document doc : uniqueDocs) {
             Object destMeta = doc.getMetadata().get("destination");
-            String dest = (destMeta instanceof String s && hasText(s)) ? s.trim() : "General";
-            uniqueCounts.merge(dest, 1, Integer::sum);
+            String dest = (destMeta instanceof String d && hasText(d)) ? d.trim() : "General";
+            destinationByDocumentId.put(doc.getId(), dest);
+            destinations.add(dest);
         }
-        uniqueCounts.forEach((dest, count) -> destinationDocumentCounts.merge(dest, count, Integer::sum));
 
-        log.info("Successfully ingested {} unique documents into VectorStore for destinations: {}", uniqueDocs.size(), uniqueCounts.keySet());
+        log.info("Successfully ingested {} unique documents into VectorStore for destinations: {}", uniqueDocs.size(), destinations);
         return uniqueDocs.size();
     }
 

@@ -19,7 +19,6 @@ import {
   getKnowledgeStatus,
   uploadKnowledgeFile,
   ingestKnowledgeArticles,
-  preloadKnowledge,
   searchKnowledge,
 } from "../../services/knowledgeApi";
 
@@ -27,7 +26,7 @@ interface DocumentIngestionDrawerProps {
   defaultDestination?: string;
 }
 
-type TabType = "upload" | "articles" | "preload" | "search";
+type TabType = "upload" | "articles" | "search";
 
 export default function DocumentIngestionDrawer({
   defaultDestination = "Osaka",
@@ -47,8 +46,6 @@ export default function DocumentIngestionDrawer({
   const [articlesDestination, setArticlesDestination] =
     useState(defaultDestination);
   const [articlesText, setArticlesText] = useState("");
-
-  const [preloadDestination, setPreloadDestination] = useState("Kyoto");
 
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<RagDocumentResponse[]>([]);
@@ -139,24 +136,6 @@ export default function DocumentIngestionDrawer({
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? err.message : "Article ingestion failed.";
-      setFeedback({ type: "error", message: msg });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-  const handlePreloadSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setFeedback(null);
-    try {
-      const res = await preloadKnowledge(preloadDestination);
-      setFeedback({
-        type: res.status === "not_found" ? "error" : "success",
-        message: res.message,
-      });
-      await fetchStatus();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Preload failed.";
       setFeedback({ type: "error", message: msg });
     } finally {
       setIsSubmitting(false);
@@ -371,21 +350,6 @@ export default function DocumentIngestionDrawer({
                 <button
                   type="button"
                   onClick={() => {
-                    setActiveTab("preload");
-                    setFeedback(null);
-                  }}
-                  className={`pb-2.5 px-3 border-b-2 flex items-center space-x-1.5 transition ${
-                    activeTab === "preload"
-                      ? "border-emerald-600 text-emerald-700"
-                      : "border-transparent text-slate-500 hover:text-slate-800"
-                  }`}
-                >
-                  <Database className="w-3.5 h-3.5" />
-                  <span>Preload Data</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
                     setActiveTab("search");
                     setFeedback(null);
                   }}
@@ -540,53 +504,7 @@ export default function DocumentIngestionDrawer({
                 </form>
               )}
 
-              {/* Tab 3: Preload Bundled Data */}
-              {activeTab === "preload" && (
-                <form onSubmit={handlePreloadSubmit} className="space-y-4">
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    Preloads bundled travel knowledge files packaged in the
-                    backend classpath (e.g.{" "}
-                    <code>classpath:data/{`{destination}`}/...json</code>).
-                  </p>
-
-                  <div>
-                    <label
-                      htmlFor="preload-dest"
-                      className="block text-xs font-bold text-slate-700 mb-1"
-                    >
-                      Bundled Destination
-                    </label>
-                    <input
-                      id="preload-dest"
-                      type="text"
-                      value={preloadDestination}
-                      onChange={(e) => setPreloadDestination(e.target.value)}
-                      placeholder="e.g. Kyoto, Osaka"
-                      className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isSubmitting || !preloadDestination.trim()}
-                    className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center space-x-2"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Preloading Dataset...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Database className="w-4 h-4" />
-                        <span>Preload Knowledge</span>
-                      </>
-                    )}
-                  </button>
-                </form>
-              )}
-
-              {/* Tab 4: Test Search */}
+              {/* Tab 3: Test Search */}
               {activeTab === "search" && (
                 <div className="space-y-4">
                   <form

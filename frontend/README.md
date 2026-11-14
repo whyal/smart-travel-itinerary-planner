@@ -24,6 +24,7 @@ Set the backend API URL:
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:8080/api
+NEXT_PUBLIC_API_KEY=dev-local-key
 ```
 
 ### 2. Install Dependencies
@@ -70,7 +71,7 @@ frontend/app/
 │       └── DocumentIngestionDrawer.tsx# Modal drawer for file uploads, articles, and RAG status
 ├── services/
 │   ├── itineraryApi.ts                # Fetch wrapper for SSE streaming and itinerary persistence
-│   └── knowledgeApi.ts                # Fetch wrapper for RAG file upload, preloading, and search
+│   └── knowledgeApi.ts                # Fetch wrapper for RAG file upload, article ingestion, and search
 ├── utils/
 │   ├── itineraryParser.ts             # Parser handling partial SSE chunks and markdown cleaning
 │   └── historyStorage.ts              # LocalStorage DAO for client-side trip history

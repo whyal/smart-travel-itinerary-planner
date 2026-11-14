@@ -7,7 +7,7 @@ Welcome! This guide is designed for developers, students, and tech-savvy users w
 ### Prerequisites
 Make sure you have:
 - **Docker Desktop** installed and running
-- **Java 21+** (`java -version`)
+- **Java 25+** (`java -version`)
 - **Node.js 18+** (`node -v`)
 
 ### Step 1: Start the Database (PostgreSQL + pgvector)
@@ -65,7 +65,6 @@ RAG (Retrieval-Augmented Generation) gives the AI factual knowledge from local g
 2. In the drawer that opens, you can:
    - **Upload Guidebooks**: Upload any `.pdf`, `.json`, `.txt`, or `.md` file.
    - **Paste Articles**: Paste travel blog tips or restaurant lists directly into the text box.
-   - **Preload Data**: Click **Preload Knowledge** for *Kyoto* to load bundled datasets instantly.
    - **Test Search**: Type a query (e.g., *"quiet zen gardens"*) to see what matching passages the AI will retrieve and check their similarity scores.
 
 ## 3. How to Switch Embedding Models (The Foolproof Guide)
@@ -146,7 +145,6 @@ Because the new model writes to a brand new table, that table is initially empty
 2. Click **"Knowledge Base"**.
 3. Notice the status card now shows your new model and its new table name (e.g. `vector_store_ollama_1024`).
 4. Ingest your documents:
-   - Go to **Preload Data** and click **Preload Knowledge** for *Kyoto*, or
    - Go to **File Upload** and upload your destination guide.
 5. You're done! Your queries now use your new embedding model.
 

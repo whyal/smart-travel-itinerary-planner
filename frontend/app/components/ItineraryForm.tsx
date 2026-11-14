@@ -288,6 +288,10 @@ Generate a ${formData.days}-day itinerary matching these constraints.`;
       if (finalParsed) {
         setItinerary(finalParsed);
         finalParsedItinerary = finalParsed;
+      } else {
+        setError(
+          "The AI response was incomplete or not a valid itinerary. Please try again.",
+        );
       }
       saveSessionCache(
         finalParsedItinerary,

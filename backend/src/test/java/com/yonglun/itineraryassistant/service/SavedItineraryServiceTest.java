@@ -139,4 +139,26 @@ class SavedItineraryServiceTest {
         assertThat(deleted).isTrue();
         verify(repository, times(1)).deleteById(1L);
     }
+
+    @Test
+    void testSaveFailsInsteadOfStoringEmptyJsonWhenSerializationFails() throws Exception {
+        ObjectMapper failingMapper = mock(ObjectMapper.class);
+        when(failingMapper.writeValueAsString(any())).thenThrow(new com.fasterxml.jackson.core.JsonProcessingException("boom") {});
+        SavedItineraryService failingService = new SavedItineraryService(repository, failingMapper);
+        SaveItineraryRequest request = new SaveItineraryRequest("s1", "Tokyo", 1, null, new Itinerary("Tokyo", List.of()), "raw", null);
+
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class, () -> failingService.saveItinerary(request));
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    void testReadReturnsNullItineraryForCorruptStoredJson() {
+        SavedItinerary corrupt = new SavedItinerary(1L, "s1", "Tokyo", 1, null, "{not json", "raw", Instant.now());
+        when(repository.findById(1L)).thenReturn(Optional.of(corrupt));
+
+        SavedItineraryResponse response = service.getSavedItineraryById(1L).orElseThrow();
+
+        assertThat(response.itinerary()).isNull();
+        assertThat(response.destination()).isEqualTo("Tokyo");
+    }
 }

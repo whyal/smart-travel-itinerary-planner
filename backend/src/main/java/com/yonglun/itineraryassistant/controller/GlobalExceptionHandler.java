@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 
@@ -42,6 +43,10 @@ public class GlobalExceptionHandler {
         log.warn("Upload rejected — file exceeds size limit: {}", ex.getMessage());
         return error(HttpStatus.PAYLOAD_TOO_LARGE,
                 "Uploaded file exceeds the maximum allowed file size limit (50MB)");
+    }
+        @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ApiErrorResponse> handleResponseStatus(ResponseStatusException ex) {
+        return error(HttpStatus.valueOf(ex.getStatusCode().value()), ex.getReason());
     }
         @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleGenericException(Exception ex) {

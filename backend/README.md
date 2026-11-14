@@ -1,10 +1,10 @@
 # AI Travel Itinerary Generator — Backend Service
 
-Core Spring Boot microservice for the AI Travel Itinerary Generator. Built with **Spring Boot 4.1.0**, **Spring AI 2.0.0**, and **Java 21**, providing AI-driven travel planning with Google Gemini, context-aware RAG, modular vector embeddings, and reactive SSE streaming.
+Core Spring Boot microservice for the AI Travel Itinerary Generator. Built with **Spring Boot 4.1.0**, **Spring AI 2.0.0**, and **Java 25**, providing AI-driven travel planning with Google Gemini, context-aware RAG, modular vector embeddings, and reactive SSE streaming.
 
 ## Prerequisites
 
-- **Java Development Kit (JDK) 21+** (`java -version`)
+- **Java Development Kit (JDK) 25+** (`java -version`)
 - **Docker Desktop** (recommended for running PostgreSQL + pgvector) OR a local **PostgreSQL 15+** with the **`pgvector`** extension
 - **Google Gemini API Key** (from [Google AI Studio](https://aistudio.google.com/)) OR local Ollama / OpenAI-compatible endpoint
 
@@ -87,6 +87,8 @@ backend/src/main/java/com/yonglun/itineraryassistant/
 | Variable | Description | Default | Required? |
 | :--- | :--- | :--- | :--- |
 | `GEMINI_API_KEY` | API key for Google Gemini GenAI chat & cloud embeddings | — | Yes (if using Google) |
+| `API_KEY` | Shared key required in the `X-Api-Key` header on every `/api/**` request | `dev-local-key` | Set a unique value outside local dev |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated frontend origins allowed to call the API | `http://localhost:3000` | No |
 | `DB_USERNAME` | PostgreSQL database user | — | Yes |
 | `DB_PASSWORD` | PostgreSQL database password | — | Yes |
 | `SPRING_DATASOURCE_URL` | JDBC connection URL | `jdbc:postgresql://localhost:5432/tripplanner` | No |
@@ -118,7 +120,6 @@ Dynamic table routing guarantees that each model uses its own vector table (`vec
 All endpoints are hosted under `/api`. For full request/response schemas, JSON payloads, and curl examples, see the [REST & Streaming API Reference](../docs/API.md).
 
 ### Itinerary Endpoints
-- `POST /api/itinerary/generate`: Synchronous structured JSON itinerary generation.
 - `POST /api/itinerary/stream`: Reactive Server-Sent Events (SSE) token streaming for real-time UI rendering.
 - `GET /api/itineraries`: Retrieve all saved itineraries.
 - `POST /api/itineraries`: Save an itinerary to PostgreSQL.
@@ -127,10 +128,8 @@ All endpoints are hosted under `/api`. For full request/response schemas, JSON p
 
 ### Knowledge Base & Ingestion Endpoints (`/api/knowledge`)
 - `POST /api/knowledge/documents`: Ingest structured travel documents with metadata.
-- `POST /api/knowledge/batch`: Ingest multiple destination document sets.
 - `POST /api/knowledge/articles`: Ingest free-form articles or blog posts.
 - `POST /api/knowledge/upload`: Multipart file upload (`.pdf`, `.json`, `.txt`, `.md`).
-- `POST /api/knowledge/preload`: Preload bundled classpath datasets (Kyoto).
 - `GET /api/knowledge/status`: Check vector store ingestion statistics per destination.
 - `GET /api/knowledge/similarity-search`: Test vector store similarity retrieval.
 

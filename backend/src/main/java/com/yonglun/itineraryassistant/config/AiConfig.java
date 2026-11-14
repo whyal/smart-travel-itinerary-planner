@@ -7,7 +7,7 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.ai.chat.memory.InMemoryChatMemoryRepository;
+import org.springframework.ai.chat.memory.ChatMemoryRepository;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.PromptTemplate;
@@ -114,9 +114,9 @@ public class AiConfig {
     }
 
     @Bean
-    public ChatMemory chatMemory() {
+    public ChatMemory chatMemory(ChatMemoryRepository chatMemoryRepository) {
         return MessageWindowChatMemory.builder()
-                .chatMemoryRepository(new InMemoryChatMemoryRepository())
+                .chatMemoryRepository(chatMemoryRepository)
                 .maxMessages(20)
                 .build();
     }
@@ -178,29 +178,10 @@ public class AiConfig {
                 {question_answer_context}
                 ---------------------
 
-                Instructions for utilizing context documents:
-                - Supporting Reference Only (NEVER Copy Verbatim): Retrieved context documents are supporting reference material ONLY (providing factual venue names, locations, transit routes, and operating hours). DO NOT copy or paste raw document sentences, paragraphs, or metadata tags (such as 'Destination:', 'Title:', 'District:', 'Category:', 'Suggested Duration:'). Every activity must be an original, synthesized travel plan written for the user's itinerary.
-                - Day Count Invariant: You MUST generate exactly the number of days requested in {query}. If context documents do not cover all requested days, supplement with your knowledge of the destination to complete every day with 2 to 4 activities.
-                - Consistent UI Fields: For EVERY activity, you MUST provide all 5 fields with clean formatting: 'time' (chronological time, e.g., '09:00 AM'), 'location' (clean venue/place name only), 'description' (fresh, concise 15-25 words action plan), 'gettingThere' (practical transit directions), and 'operatingHours' (visiting hours).
-                - JSON Whitespace & Clean Formatting: Output clean, compact RFC8259 JSON without unnecessary whitespace, excessive indentation, or empty lines. All string properties must be single-line strings with normal single-space separation between words. Never include unescaped newlines, tabs, or multiple consecutive spaces in string values.
+                Use the context only as supporting reference for venue names, locations, transit routes and operating hours. Never copy its sentences or metadata tags; write an original plan.
                 """);
 
         return builder
-                .defaultSystem("You are an expert travel assistant. Generate compact, realistic itineraries adhering strictly to the requested schema.\n\n" +
-                        "Core Rules:\n" +
-                        "- Day Count Invariant: The 'days' array MUST contain EXACTLY the number of days requested in the user prompt (numbered sequentially 1 to N). Never collapse or truncate days.\n" +
-                        "- Activities Requirement: Every day MUST include 2 to 4 activities. Never leave 'activities' empty.\n" +
-                        "- Supporting Knowledge Synthesis (NEVER Copy Verbatim): Retrieved context documents are supporting reference material ONLY. DO NOT lazily copy or echo identical sentences, paragraphs, or document metadata tags (e.g. 'Destination:', 'Title:', 'District:', 'Category:'). Synthesize facts into a fresh, original travel plan from a traveler's perspective.\n" +
-                        "- Consistent UI Activity Fields: For EVERY activity, you MUST provide all 5 fields with clean formatting for the UI:\n" +
-                        "  1. 'time': Specific scheduled time or window (e.g. '09:00 AM', '01:30 PM', '06:00 PM').\n" +
-                        "  2. 'location': Clean place/venue name only (e.g. 'Osaka Castle'), strictly without prefixes or metadata.\n" +
-                        "  3. 'description': Concise (15 to 25 words) synthesized action plan of what the traveler experiences. Never copy identical text from context documents.\n" +
-                        "  4. 'gettingThere': Specific, realistic transit directions (e.g. '5 min walk from Station Exit 2').\n" +
-                        "  5. 'operatingHours': Specific operating hours or window (e.g. '09:00 AM - 05:00 PM' or 'Open 24 hours').\n" +
-                        "- Location Uniqueness: Every attraction, museum, restaurant, landmark, or specific venue MUST appear at most once across the entire multi-day itinerary.\n" +
-                        "- Geographic Flow: Cluster activities by district or neighborhood per day to eliminate unnecessary commuting and backtracking.\n" +
-                        "- Realistic Pacing: Plan 2 to 4 major activities per day with practical 'gettingThere' transit details and accurate 'operatingHours'.\n" +
-                        "- JSON Whitespace & Formatting: Output clean, compact RFC8259 JSON without unnecessary spaces, excessive indentation, blank lines, or trailing whitespace. In all string values, use normal single-space separation between words with no raw newlines or tabs.")
                 .defaultAdvisors(
                         MessageChatMemoryAdvisor.builder(chatMemory).build(),
                         QuestionAnswerAdvisor.builder(vectorStore)
