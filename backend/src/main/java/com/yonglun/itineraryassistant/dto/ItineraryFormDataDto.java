@@ -5,5 +5,6 @@ public record ItineraryFormDataDto(
     Integer days,
     String pace,
     String interests,
-    String budget
+    String budget,
+    String notes
 ) {}

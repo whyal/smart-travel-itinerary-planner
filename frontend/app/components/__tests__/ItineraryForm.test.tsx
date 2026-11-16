@@ -78,6 +78,35 @@ describe("ItineraryForm Component", () => {
     });
   });
 
+  describe("Additional notes", () => {
+    const submitAndGetPrompt = async (notes?: string) => {
+      const user = userEvent.setup();
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        body: { getReader: () => createMockStreamReader([]) },
+      });
+      render(<ItineraryForm />);
+      if (notes !== undefined) {
+        await user.type(screen.getByLabelText(/anything else/i), notes);
+      }
+      await user.click(
+        screen.getByRole("button", { name: /generate streamed itinerary/i }),
+      );
+      const body = (global.fetch as jest.Mock).mock.calls[0][1].body;
+      return JSON.parse(body).prompt as string;
+    };
+
+    it("includes trimmed notes in the prompt when provided", async () => {
+      const prompt = await submitAndGetPrompt("  vegetarian  ");
+      expect(prompt).toContain("Budget: Mid-range\nAdditional notes: vegetarian");
+    });
+
+    it("omits the notes line when notes are blank", async () => {
+      const prompt = await submitAndGetPrompt();
+      expect(prompt).not.toContain("Additional notes");
+    });
+  });
+
   describe("Form Submission (handleSubmit) & SSE Streaming", () => {
     it("submits form data, sends POST request to API, and streams formatted itinerary text", async () => {
       const user = userEvent.setup();

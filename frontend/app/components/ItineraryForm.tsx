@@ -238,11 +238,12 @@ export default function ItineraryForm() {
   };
 
   const formatToKeyValuePrompt = (): string => {
+    const notes = formData.notes?.trim();
     return `Destination: ${formData.destination}
 Days: ${formData.days}
 Pace: ${formData.pace}
 Interests: ${formData.interests}
-Budget: ${formData.budget}
+Budget: ${formData.budget}${notes ? `\nAdditional notes: ${notes}` : ""}
 
 Generate a ${formData.days}-day itinerary matching these constraints.`;
   };
@@ -337,7 +338,7 @@ Generate a ${formData.days}-day itinerary matching these constraints.`;
   };
 
   const handleChange = (
-    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));

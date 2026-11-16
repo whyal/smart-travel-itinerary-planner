@@ -23,6 +23,7 @@ export interface ItineraryFormData {
   pace: string;
   interests: string;
   budget: string;
+  notes?: string;
 }
 
 export interface SavedItineraryItem {
