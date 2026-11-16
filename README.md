@@ -9,7 +9,7 @@
 
 An intelligent full-stack travel planner that produces personalized day-by-day itineraries. Powered by Spring AI, Google Gemini, PostgreSQL `pgvector`, and Next.js 16, featuring real-time Server-Sent Events (SSE) streaming and dynamic Retrieval-Augmented Generation (RAG).
 
-![Itinerary Generation Interface](https://github.com/user-attachments/assets/b9cc0754-fb38-4c69-973f-abef87db9fde")
+![Itinerary Generation Interface](https://github.com/user-attachments/assets/b9cc0754-fb38-4c69-973f-abef87db9fde)
 
 ## 📚 Documentation Directory
 
