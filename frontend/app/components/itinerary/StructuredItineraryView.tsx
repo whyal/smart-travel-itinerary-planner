@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { ItineraryFormData, ItineraryResponse, SaveToDbStatus } from "../../types/itinerary";
 import DayPlanCard from "./DayPlanCard";
+import { formatDayDate } from "../../utils/dates";
 
 interface StructuredItineraryViewProps {
   itinerary: ItineraryResponse;
@@ -110,7 +111,11 @@ export default function StructuredItineraryView({
       {/* Individual Day Cards Container */}
       <div className="space-y-6">
         {filteredDays.map((day) => (
-          <DayPlanCard key={day.dayNumber} day={day} />
+          <DayPlanCard
+            key={day.dayNumber}
+            day={day}
+            date={formatDayDate(formData.startDate, day.dayNumber)}
+          />
         ))}
       </div>
     </div>

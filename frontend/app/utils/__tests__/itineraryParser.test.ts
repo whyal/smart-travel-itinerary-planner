@@ -91,6 +91,63 @@ describe("itineraryParser", () => {
   });
 
   describe("normalizeItinerary", () => {
+    it("keeps repeated airport and hotel logistics but still dedupes repeated sightseeing", () => {
+      const act = (location: string, category: string) => ({
+        time: "09:00 AM",
+        location,
+        description: "desc",
+        category,
+      });
+      const result = normalizeItinerary({
+        destination: "Osaka",
+        days: [
+          {
+            dayNumber: 1,
+            theme: "Arrive",
+            activities: [
+              act("Kansai International Airport", "ARRIVAL"),
+              act("Hotel", "CHECK_IN"),
+              act("Osaka Castle", "SIGHTSEEING"),
+            ],
+          },
+          {
+            dayNumber: 2,
+            theme: "Depart",
+            activities: [
+              act("Hotel", "check-out"),
+              act("Osaka Castle", "SIGHTSEEING"),
+              act("Kansai International Airport", "DEPARTURE"),
+            ],
+          },
+        ],
+      });
+      expect(result.days[0].activities.map((a) => a.category)).toEqual([
+        "ARRIVAL",
+        "CHECK_IN",
+        "SIGHTSEEING",
+      ]);
+      expect(result.days[1].activities.map((a) => a.category)).toEqual([
+        "CHECK_OUT",
+        "DEPARTURE",
+      ]);
+    });
+
+    it("ignores unknown category values", () => {
+      const result = normalizeItinerary({
+        destination: "Osaka",
+        days: [
+          {
+            dayNumber: 1,
+            theme: "T",
+            activities: [
+              { time: "09:00 AM", location: "X", description: "d", category: "SHOPPING" },
+            ],
+          },
+        ],
+      });
+      expect(result.days[0].activities[0].category).toBeUndefined();
+    });
+
     it("normalizes day plans with whitespace in keys and date property", () => {
       const raw = {
         destination: "Beijing",

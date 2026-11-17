@@ -54,7 +54,7 @@ Open your browser to **`http://localhost:3000`**. You are ready to plan trips!
 
 ### A. Generating an Itinerary
 1. On the main page, choose your **Destination** (e.g., *Osaka*, *Kyoto*, *Tokyo*).
-2. Pick your travel pace, interests, and budget, and optionally add free-text notes (dietary needs, mobility, must-see places).
+2. Pick your travel pace, interests, and budget, and optionally set a start date (so venues are scheduled around weekly closures) and add free-text notes (dietary needs, mobility, must-see places).
 3. Click **Generate Streamed Itinerary**.
 4. The AI streams back a day-by-day plan with neighborhood grouping, transit directions, and timing.
 

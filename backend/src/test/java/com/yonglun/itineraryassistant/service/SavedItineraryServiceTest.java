@@ -39,7 +39,7 @@ class SavedItineraryServiceTest {
 
     @Test
     void testSaveItinerary() {
-        ItineraryFormDataDto formData = new ItineraryFormDataDto("Tokyo", 4, "Fast", "Shopping", "High", "Arriving late");
+        ItineraryFormDataDto formData = new ItineraryFormDataDto("Tokyo", 4, "Fast", "Shopping", "High", "Arriving late", "2026-12-05");
         Itinerary itinerary = new Itinerary("Tokyo", List.of());
         SaveItineraryRequest request = new SaveItineraryRequest(
                 "session-1",

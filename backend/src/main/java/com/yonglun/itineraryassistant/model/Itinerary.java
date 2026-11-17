@@ -27,10 +27,17 @@ public record Itinerary(
         String gettingThere,
 
         @JsonPropertyDescription("Visiting hours, e.g., '09:00 AM - 05:00 PM' or 'Open 24 hours'")
-        String operatingHours
+        String operatingHours,
+
+        @JsonPropertyDescription("Activity type: SIGHTSEEING for attractions, DINING for meals, ARRIVAL for airport arrival, CHECK_IN for hotel check-in, CHECK_OUT for hotel check-out, DEPARTURE for airport departure")
+        Category category
     ) {
         public Activity(String time, String location, String description) {
-            this(time, location, description, null, null);
+            this(time, location, description, null, null, null);
         }
+    }
+
+    public enum Category {
+        SIGHTSEEING, DINING, ARRIVAL, CHECK_IN, CHECK_OUT, DEPARTURE
     }
 }

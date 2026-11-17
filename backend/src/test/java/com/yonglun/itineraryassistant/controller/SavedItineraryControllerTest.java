@@ -43,7 +43,7 @@ class SavedItineraryControllerTest {
     @Test
     void testSaveItinerarySuccess() throws Exception {
         ItineraryFormDataDto formData = new ItineraryFormDataDto(
-                "Paris", 3, "Moderate", "Museums, Food", "Medium", "Vegetarian"
+                "Paris", 3, "Moderate", "Museums, Food", "Medium", "Vegetarian", "2026-12-05"
         );
 
         Itinerary.Activity activity = new Itinerary.Activity(
@@ -90,7 +90,7 @@ class SavedItineraryControllerTest {
 
     @Test
     void testGetAllAndFilterByConversationId() throws Exception {
-        ItineraryFormDataDto formData = new ItineraryFormDataDto("Tokyo", 5, "Fast", "Anime", "High", null);
+        ItineraryFormDataDto formData = new ItineraryFormDataDto("Tokyo", 5, "Fast", "Anime", "High", null, null);
         Itinerary itinerary = new Itinerary("Tokyo", List.of());
 
         SavedItineraryResponse res1 = new SavedItineraryResponse(1L, "session-1", "Tokyo", 5, formData, itinerary, "text1", Instant.now());

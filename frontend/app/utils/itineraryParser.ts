@@ -1,4 +1,30 @@
-import { Activity, DayPlan, ItineraryResponse } from "../types/itinerary";
+import {
+  Activity,
+  ActivityCategory,
+  DayPlan,
+  ItineraryResponse,
+} from "../types/itinerary";
+
+const CATEGORIES: readonly ActivityCategory[] = [
+  "SIGHTSEEING",
+  "DINING",
+  "ARRIVAL",
+  "CHECK_IN",
+  "CHECK_OUT",
+  "DEPARTURE",
+];
+
+export const LOGISTICS_CATEGORIES: readonly ActivityCategory[] = [
+  "ARRIVAL",
+  "CHECK_IN",
+  "CHECK_OUT",
+  "DEPARTURE",
+];
+
+function parseCategory(val: unknown): ActivityCategory | undefined {
+  const normalized = cleanStringValue(val).toUpperCase().replace(/[\s-]+/g, "_");
+  return CATEGORIES.find((c) => c === normalized);
+}
 
 function cleanStringValue(val: unknown): string {
   if (val === null || val === undefined) return "";
@@ -420,6 +446,7 @@ export function normalizeItinerary(
         description: description || `Explore ${location}.`,
         gettingThere: gettingThere || "Accessible via local transit or walking",
         operatingHours: operatingHours || "Flexible / General visiting hours",
+        category: parseCategory(getProperty(actObj, "category", "type")),
       };
     });
 
@@ -435,6 +462,9 @@ export function normalizeItinerary(
   const uniqueDays = days.map((day) => ({
     ...day,
     activities: day.activities.filter((act) => {
+      if (act.category && LOGISTICS_CATEGORIES.includes(act.category)) {
+        return true;
+      }
       const key = act.location.trim().toLowerCase();
       if (!key || key === destKey) return true;
       if (seen.has(key)) return false;

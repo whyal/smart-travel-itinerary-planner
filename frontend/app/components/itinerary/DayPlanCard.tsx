@@ -1,13 +1,24 @@
 "use client";
 
 import { Calendar, Clock, MapPin, Navigation, Clock3 } from "lucide-react";
-import { DayPlan } from "../../types/itinerary";
+import { ActivityCategory, DayPlan } from "../../types/itinerary";
+import { LOGISTICS_CATEGORIES } from "../../utils/itineraryParser";
+
+const CATEGORY_LABELS: Record<ActivityCategory, string> = {
+  SIGHTSEEING: "Sightseeing",
+  DINING: "Dining",
+  ARRIVAL: "Arrival",
+  CHECK_IN: "Hotel check-in",
+  CHECK_OUT: "Hotel check-out",
+  DEPARTURE: "Departure",
+};
 
 interface DayPlanCardProps {
   day: DayPlan;
+  date?: string;
 }
 
-export default function DayPlanCard({ day }: DayPlanCardProps) {
+export default function DayPlanCard({ day, date }: DayPlanCardProps) {
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-slate-200/70 overflow-hidden hover:shadow-xl transition-all duration-200">
       {/* Individual Day Header */}
@@ -16,6 +27,7 @@ export default function DayPlanCard({ day }: DayPlanCardProps) {
           <div className="px-3 py-1 bg-blue-500 text-white rounded-lg text-xs font-extrabold uppercase tracking-wider flex items-center space-x-1">
             <Calendar className="w-3.5 h-3.5" />
             <span>Day {day.dayNumber}</span>
+            {date && <span className="font-medium normal-case">· {date}</span>}
           </div>
           <h4 className="text-base sm:text-lg font-bold text-white">
             {day.theme}
@@ -46,6 +58,11 @@ export default function DayPlanCard({ day }: DayPlanCardProps) {
                   <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                   <span>{act.location}</span>
                 </span>
+                {act.category && LOGISTICS_CATEGORIES.includes(act.category) && (
+                  <span className="text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200/70 px-2 py-0.5 rounded-md">
+                    {CATEGORY_LABELS[act.category]}
+                  </span>
+                )}
               </div>
 
               <p className="text-slate-600 leading-relaxed text-sm">

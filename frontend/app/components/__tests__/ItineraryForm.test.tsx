@@ -107,6 +107,42 @@ describe("ItineraryForm Component", () => {
     });
   });
 
+  describe("Start date", () => {
+    it("lists a weekday date for each day in the prompt when a start date is set", async () => {
+      const user = userEvent.setup();
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        body: { getReader: () => createMockStreamReader([]) },
+      });
+      render(<ItineraryForm />);
+      await user.type(screen.getByLabelText(/start date/i), "2026-12-05");
+      await user.click(
+        screen.getByRole("button", { name: /generate streamed itinerary/i }),
+      );
+      const prompt = JSON.parse(
+        (global.fetch as jest.Mock).mock.calls[0][1].body,
+      ).prompt as string;
+      expect(prompt).toContain("Dates:\nDay 1: Sat, 5 Dec 2026");
+      expect(prompt).toContain("Day 3: Mon, 7 Dec 2026");
+    });
+
+    it("omits the dates block when no start date is set", async () => {
+      const user = userEvent.setup();
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        body: { getReader: () => createMockStreamReader([]) },
+      });
+      render(<ItineraryForm />);
+      await user.click(
+        screen.getByRole("button", { name: /generate streamed itinerary/i }),
+      );
+      const prompt = JSON.parse(
+        (global.fetch as jest.Mock).mock.calls[0][1].body,
+      ).prompt as string;
+      expect(prompt).not.toContain("Dates:");
+    });
+  });
+
   describe("Form Submission (handleSubmit) & SSE Streaming", () => {
     it("submits form data, sends POST request to API, and streams formatted itinerary text", async () => {
       const user = userEvent.setup();

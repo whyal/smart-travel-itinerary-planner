@@ -82,7 +82,8 @@ Returns all itineraries stored in the database, ordered by creation date descend
       "pace": "moderate",
       "budget": "medium",
       "interests": ["culture", "food"],
-      "notes": "Travelling with a toddler"
+      "notes": "Travelling with a toddler",
+      "startDate": "2026-12-05"
     },
     "itinerary": { ... },
     "rawText": "...",
@@ -107,7 +108,8 @@ Persists a generated itinerary to PostgreSQL.
     "pace": "moderate",
     "budget": "medium",
     "interests": ["culture", "food"],
-    "notes": "Travelling with a toddler"
+    "notes": "Travelling with a toddler",
+    "startDate": "2026-12-05"
   },
   "itinerary": { ... },
   "rawText": "...",

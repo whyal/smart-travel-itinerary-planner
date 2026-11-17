@@ -1,9 +1,18 @@
+export type ActivityCategory =
+  | "SIGHTSEEING"
+  | "DINING"
+  | "ARRIVAL"
+  | "CHECK_IN"
+  | "CHECK_OUT"
+  | "DEPARTURE";
+
 export interface Activity {
   time: string;
   location: string;
   description: string;
   gettingThere?: string;
   operatingHours?: string;
+  category?: ActivityCategory;
 }
 
 export interface DayPlan {
@@ -24,6 +33,7 @@ export interface ItineraryFormData {
   interests: string;
   budget: string;
   notes?: string;
+  startDate?: string;
 }
 
 export interface SavedItineraryItem {

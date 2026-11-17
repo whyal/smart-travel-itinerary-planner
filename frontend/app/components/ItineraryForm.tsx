@@ -8,6 +8,7 @@ import {
   SaveToDbStatus,
 } from "../types/itinerary";
 import { parseItineraryFromText } from "../utils/itineraryParser";
+import { formatDayDate } from "../utils/dates";
 import {
   saveItineraryToDatabase,
   streamItinerary,
@@ -239,11 +240,17 @@ export default function ItineraryForm() {
 
   const formatToKeyValuePrompt = (): string => {
     const notes = formData.notes?.trim();
+    const dates = Array.from({ length: Number(formData.days) || 0 }, (_, i) =>
+      formatDayDate(formData.startDate, i + 1),
+    );
+    const datesBlock = dates.every(Boolean)
+      ? dates.map((d, i) => `\nDay ${i + 1}: ${d}`).join("")
+      : "";
     return `Destination: ${formData.destination}
 Days: ${formData.days}
 Pace: ${formData.pace}
 Interests: ${formData.interests}
-Budget: ${formData.budget}${notes ? `\nAdditional notes: ${notes}` : ""}
+Budget: ${formData.budget}${notes ? `\nAdditional notes: ${notes}` : ""}${datesBlock ? `\nDates:${datesBlock}` : ""}
 
 Generate a ${formData.days}-day itinerary matching these constraints.`;
   };
