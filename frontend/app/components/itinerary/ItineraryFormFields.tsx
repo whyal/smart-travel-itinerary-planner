@@ -101,14 +101,13 @@ export default function ItineraryFormFields({
               htmlFor="days"
               className="block text-sm font-semibold text-slate-700 mb-1.5"
             >
-              Days (1-7)
+              Days
             </label>
             <input
               id="days"
               type="number"
               name="days"
               min="1"
-              max="7"
               value={formData.days}
               onChange={onChange}
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-800 transition"
