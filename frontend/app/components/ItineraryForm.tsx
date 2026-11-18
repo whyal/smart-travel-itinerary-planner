@@ -31,6 +31,13 @@ const defaultForm: ItineraryFormData = {
   budget: "Mid-range",
 };
 
+const withBlankTextFields = (form: ItineraryFormData): ItineraryFormData => ({
+  ...form,
+  destination: "",
+  interests: "",
+  notes: "",
+});
+
 export default function ItineraryForm() {
   const [formData, setFormData] = useState<ItineraryFormData>(defaultForm);
   const [loading, setLoading] = useState(false);
@@ -48,6 +55,7 @@ export default function ItineraryForm() {
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const streamEndRef = useRef<HTMLDivElement | null>(null);
+  const submittedFormRef = useRef<ItineraryFormData | null>(null);
   useEffect(() => {
     queueMicrotask(() => {
       let savedId = localStorage.getItem("itinerary_conversation_id");
@@ -107,6 +115,7 @@ export default function ItineraryForm() {
     setConversationId(item.id);
     setItinerary(item.itinerary);
     setFormData(item.formData);
+    submittedFormRef.current = null;
     setStreamedText(item.streamedText);
     setSelectedDayFilter("all");
     setError(null);
@@ -118,6 +127,10 @@ export default function ItineraryForm() {
     const updated = deleteFromHistory(id);
     setHistoryList(updated);
     if (conversationId === id) {
+      const blank = withBlankTextFields(formData);
+      saveSessionCache(null, "", blank, id);
+      setFormData(blank);
+      submittedFormRef.current = null;
       setItinerary(null);
       setStreamedText("");
       setSaveToDbStatus("idle");
@@ -147,7 +160,7 @@ export default function ItineraryForm() {
     }
 
     const sessionUuid = targetId || conversationId || crypto.randomUUID();
-    const currentForm = targetFormData || formData;
+    const currentForm = targetFormData || submittedFormRef.current || formData;
 
     setSaveToDbStatus("saving");
     setSaveToDbMessage(null);
@@ -221,6 +234,7 @@ export default function ItineraryForm() {
       localStorage.setItem("itinerary_conversation_id", newId);
     }
     setConversationId(newId);
+    submittedFormRef.current = null;
     setItinerary(null);
     setStreamedText("");
     setError(null);
@@ -229,9 +243,10 @@ export default function ItineraryForm() {
   };
 
   const handleClearSavedData = () => {
-    if (typeof window !== "undefined" && conversationId) {
-      localStorage.removeItem(`itinerary_saved_${conversationId}`);
-    }
+    const blank = withBlankTextFields(formData);
+    saveSessionCache(null, "", blank, conversationId);
+    setFormData(blank);
+    submittedFormRef.current = null;
     setItinerary(null);
     setStreamedText("");
     setSaveToDbStatus("idle");
@@ -318,6 +333,14 @@ Generate a ${formData.days}-day itinerary matching these constraints.`;
         };
         const updatedHistory = saveToHistory(newItem);
         setHistoryList(updatedHistory);
+        submittedFormRef.current = { ...formData };
+        setFormData(withBlankTextFields);
+        saveSessionCache(
+          finalParsedItinerary,
+          accumulatedText,
+          withBlankTextFields(formData),
+          currentSessionId,
+        );
         if (autoSaveToDb) {
           handleSaveToDatabase(
             finalParsedItinerary,

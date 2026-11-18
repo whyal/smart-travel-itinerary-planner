@@ -193,6 +193,36 @@ describe("ItineraryForm Component", () => {
       });
     });
 
+    it("clears destination, interests and notes after a successful generation", async () => {
+      const user = userEvent.setup();
+      const sampleJson = JSON.stringify({
+        destination: "Osaka",
+        days: [
+          {
+            dayNumber: 1,
+            theme: "Day one",
+            activities: [
+              { time: "09:00 AM", location: "Osaka Castle", description: "Visit" },
+            ],
+          },
+        ],
+      });
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        body: { getReader: () => createMockStreamReader([`data: ${sampleJson}\n`]) },
+      });
+
+      render(<ItineraryForm />);
+      await user.click(
+        screen.getByRole("button", { name: /generate streamed itinerary/i }),
+      );
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/destination/i)).toHaveValue("");
+      });
+      expect(screen.getByLabelText(/interests/i)).toHaveValue("");
+    });
+
     it("handles server HTTP error response during form submit", async () => {
       const consoleErrorSpy = jest
         .spyOn(console, "error")
