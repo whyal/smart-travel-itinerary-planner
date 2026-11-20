@@ -40,13 +40,19 @@ export async function saveItineraryToDatabase(
   }
 }
 
-function extractSseText(lines: string[]): string {
+const RETRY_MARKER = "[RETRY]";
+
+function extractSseText(lines: string[]): { text: string; retry: boolean } {
   let text = "";
+  let retry = false;
   for (const rawLine of lines) {
     const line = rawLine.endsWith("\r") ? rawLine.slice(0, -1) : rawLine;
     if (line.startsWith("data:")) {
       const content = line.slice(5);
-      if (content !== "[DONE]") {
+      if (content === RETRY_MARKER) {
+        text = "";
+        retry = true;
+      } else if (content !== "[DONE]") {
         text += content;
       }
     } else if (
@@ -58,14 +64,21 @@ function extractSseText(lines: string[]): string {
       text += line;
     }
   }
-  return text;
+  return { text, retry };
 }
 
 export async function streamItinerary(
   payload: StreamItineraryPayload,
   signal: AbortSignal,
   onChunk: (chunk: string) => void,
+  onRetry: () => void = () => {},
 ): Promise<void> {
+  const emit = (lines: string[]) => {
+    const { text, retry } = extractSseText(lines);
+    if (retry) onRetry();
+    if (text) onChunk(text);
+  };
+
   const response = await fetch(`${API_BASE_URL}/itinerary/stream`, {
     method: "POST",
     headers: apiHeaders({
@@ -97,16 +110,9 @@ export async function streamItinerary(
     buffer += decoder.decode(value, { stream: true });
     const lines = buffer.split("\n");
     buffer = lines.pop() ?? "";
-
-    const textChunk = extractSseText(lines);
-    if (textChunk) {
-      onChunk(textChunk);
-    }
+    emit(lines);
   }
 
   buffer += decoder.decode();
-  const textChunk = extractSseText(buffer.split("\n"));
-  if (textChunk) {
-    onChunk(textChunk);
-  }
+  emit(buffer.split("\n"));
 }

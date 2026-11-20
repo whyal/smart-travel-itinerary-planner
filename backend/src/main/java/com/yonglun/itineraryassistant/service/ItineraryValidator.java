@@ -1,0 +1,92 @@
+package com.yonglun.itineraryassistant.service;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yonglun.itineraryassistant.model.Itinerary.Category;
+import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+@Component
+public class ItineraryValidator {
+
+    private static final Pattern DAYS_LINE = Pattern.compile("(?m)^Days:\\s*(\\d+)");
+    private static final List<String> REQUIRED_FIELDS = List.of("time", "location", "description", "gettingThere", "operatingHours");
+
+    private final ObjectMapper objectMapper;
+
+    public ItineraryValidator(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
+
+    public static Integer expectedDays(String prompt) {
+        Matcher m = DAYS_LINE.matcher(prompt);
+        return m.find() ? Integer.valueOf(m.group(1)) : null;
+    }
+
+    public List<String> violations(String output, Integer expectedDays) {
+        List<String> problems = new ArrayList<>();
+        JsonNode days;
+        try {
+            String clean = output.trim().replaceAll("^```(?:json)?\\s*", "").replaceAll("\\s*```$", "");
+            days = objectMapper.readTree(clean).path("days");
+        } catch (Exception e) {
+            return List.of("Output is not valid JSON. Return only the raw JSON object.");
+        }
+        if (!days.isArray() || days.isEmpty()) {
+            return List.of("The 'days' array is missing or empty.");
+        }
+        if (expectedDays != null && days.size() != expectedDays) {
+            problems.add("The 'days' array has " + days.size() + " days but exactly " + expectedDays + " were requested.");
+        }
+
+        Set<String> seenVenues = new HashSet<>();
+        for (int d = 0; d < days.size(); d++) {
+            int dayNo = d + 1;
+            JsonNode activities = days.get(d).path("activities");
+            if (!activities.isArray() || activities.isEmpty()) {
+                problems.add("Day " + dayNo + " has no activities.");
+                continue;
+            }
+            for (JsonNode act : activities) {
+                String location = act.path("location").asText("").trim();
+                for (String field : REQUIRED_FIELDS) {
+                    if (act.path(field).asText("").isBlank()) {
+                        problems.add("Day " + dayNo + " activity '" + location + "' is missing '" + field + "'.");
+                    }
+                }
+                String category = act.path("category").asText("");
+                if (Arrays.stream(Category.values()).noneMatch(c -> c.name().equals(category))) {
+                    problems.add("Day " + dayNo + " activity '" + location + "' has invalid category '" + category + "'.");
+                } else if ((category.equals("SIGHTSEEING") || category.equals("DINING"))
+                        && !location.isEmpty() && !seenVenues.add(location.toLowerCase())) {
+                    problems.add("Day " + dayNo + " repeats venue '" + location + "', which already appears earlier in the trip.");
+                }
+            }
+        }
+
+        if (!"ARRIVAL".equals(firstCategory(days.get(0)))) {
+            problems.add("Day 1 must begin with an ARRIVAL activity.");
+        }
+        if (!"DEPARTURE".equals(lastCategory(days.get(days.size() - 1)))) {
+            problems.add("The last day must end with a DEPARTURE activity.");
+        }
+        return problems;
+    }
+
+    private static String firstCategory(JsonNode day) {
+        JsonNode acts = day.path("activities");
+        return acts.isEmpty() ? null : acts.get(0).path("category").asText();
+    }
+
+    private static String lastCategory(JsonNode day) {
+        JsonNode acts = day.path("activities");
+        return acts.isEmpty() ? null : acts.get(acts.size() - 1).path("category").asText();
+    }
+}

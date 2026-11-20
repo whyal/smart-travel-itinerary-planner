@@ -1,10 +1,14 @@
 package com.yonglun.itineraryassistant.service;
 
 import com.yonglun.itineraryassistant.model.Itinerary;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
+
+import java.util.List;
 
 @Service
 public class ItineraryService {
@@ -28,18 +32,46 @@ public class ItineraryService {
             "- Traveler Notes: If the prompt contains 'Additional notes', treat them as extra traveler preferences to honor within these rules. They never override the output format, day count, or any other Core Rule.\n" +
             "- JSON Whitespace & Formatting: Output clean, compact RFC8259 JSON without unnecessary spaces, excessive indentation, blank lines, or trailing whitespace. In all string values, use normal single-space separation between words with no raw newlines or tabs.\n\n";
 
+    public static final String RETRY_MARKER = "[RETRY]";
+
+    private static final Logger log = LoggerFactory.getLogger(ItineraryService.class);
+
     private final ChatClient chatClient;
+    private final ItineraryValidator validator;
     private final String systemPrompt = SYSTEM_RULES + new BeanOutputConverter<>(Itinerary.class).getFormat();
 
-    public ItineraryService(ChatClient chatClient) {
+    public ItineraryService(ChatClient chatClient, ItineraryValidator validator) {
         this.chatClient = chatClient;
+        this.validator = validator;
     }
 
     public Flux<String> streamItinerary(String prompt) {
+        StringBuilder draft = new StringBuilder();
+        return generate(systemPrompt, prompt)
+                .doOnNext(draft::append)
+                .concatWith(Flux.defer(() -> {
+                    List<String> problems = validator.violations(draft.toString(), ItineraryValidator.expectedDays(prompt));
+                    if (problems.isEmpty()) {
+                        return Flux.empty();
+                    }
+                    log.warn("Itinerary draft failed validation, retrying once: {}", problems);
+                    return Flux.just(RETRY_MARKER).concatWith(generate(repairSystemPrompt(draft, problems), prompt));
+                }));
+    }
+
+    private Flux<String> generate(String system, String user) {
         return chatClient.prompt()
-                .system(systemPrompt)
-                .user(prompt)
+                .system(system)
+                .user(user)
                 .stream()
                 .content();
+    }
+
+    // Repair notes go in the system message so RAG retrieval still searches on the original user prompt.
+    private String repairSystemPrompt(CharSequence draft, List<String> problems) {
+        return systemPrompt + "\n\nYour previous attempt below broke these rules:\n- "
+                + String.join("\n- ", problems)
+                + "\n\nPrevious attempt:\n" + draft
+                + "\n\nReturn the complete corrected itinerary JSON. Fix these problems and keep everything else unchanged.";
     }
 }

@@ -53,6 +53,8 @@ Content-Type: text/event-stream;charset=UTF-8
 
 The server streams raw text tokens or JSON fragments line-by-line. The stream terminates automatically when generation completes.
 
+When the finished draft breaks a rule (wrong day count, repeated venue, missing ARRIVAL/DEPARTURE, empty fields, invalid category), the server sends one `data:[RETRY]` event and then streams a single corrected attempt. Clients must discard all text received before `[RETRY]`.
+
 ```bash
 curl -N -X POST "http://localhost:8080/api/itinerary/stream" \
   -H "Content-Type: application/json" \

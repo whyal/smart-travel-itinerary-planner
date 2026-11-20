@@ -304,6 +304,10 @@ Generate a ${formData.days}-day itinerary matching these constraints.`;
           accumulatedText += chunk;
           setStreamedText(accumulatedText);
         },
+        () => {
+          accumulatedText = "";
+          setStreamedText("");
+        },
       );
       const finalParsed = parseItineraryFromText(
         accumulatedText,

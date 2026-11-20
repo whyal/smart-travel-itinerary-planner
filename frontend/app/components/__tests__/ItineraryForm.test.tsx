@@ -193,6 +193,41 @@ describe("ItineraryForm Component", () => {
       });
     });
 
+    it("discards the draft and shows only the repaired itinerary after a retry event", async () => {
+      const user = userEvent.setup();
+      const itineraryAt = (location: string) =>
+        JSON.stringify({
+          destination: "Osaka",
+          days: [
+            {
+              dayNumber: 1,
+              theme: "Day one",
+              activities: [{ time: "09:00 AM", location, description: "Visit" }],
+            },
+          ],
+        });
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        body: {
+          getReader: () =>
+            createMockStreamReader([
+              `data:${itineraryAt("Draft Venue")}\n\n`,
+              `data:[RETRY]\n\ndata:${itineraryAt("Repaired Venue")}\n\n`,
+            ]),
+        },
+      });
+
+      render(<ItineraryForm />);
+      await user.click(
+        screen.getByRole("button", { name: /generate streamed itinerary/i }),
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(/Repaired Venue/i)).toBeInTheDocument();
+      });
+      expect(screen.queryByText(/Draft Venue/i)).not.toBeInTheDocument();
+    });
+
     it("clears destination, interests and notes after a successful generation", async () => {
       const user = userEvent.setup();
       const sampleJson = JSON.stringify({
