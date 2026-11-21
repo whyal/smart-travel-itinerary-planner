@@ -35,6 +35,12 @@ function cleanStringValue(val: unknown): string {
     .trim();
 }
 
+function toMinutes(val: unknown): number | undefined {
+  if (val === undefined || val === null || val === "") return undefined;
+  const n = Number(val);
+  return Number.isFinite(n) && n >= 0 ? Math.round(n) : undefined;
+}
+
 export function stripMetadataHeader(text: unknown): string {
   if (text === null || text === undefined) return "";
   const cleaned = String(text)
@@ -446,6 +452,10 @@ export function normalizeItinerary(
         description: description || `Explore ${location}.`,
         gettingThere: gettingThere || "Accessible via local transit or walking",
         operatingHours: operatingHours || "Flexible / General visiting hours",
+        travelMinutesFromPrevious: toMinutes(
+          getProperty(actObj, "travelMinutesFromPrevious"),
+        ),
+        durationMinutes: toMinutes(getProperty(actObj, "durationMinutes")),
         category: parseCategory(getProperty(actObj, "category", "type")),
       };
     });

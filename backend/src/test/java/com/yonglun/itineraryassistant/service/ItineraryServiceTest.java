@@ -21,9 +21,9 @@ class ItineraryServiceTest {
 
     private static final String VALID = """
             {"destination":"Kyoto","days":[{"dayNumber":1,"theme":"t","activities":[
-            {"time":"09:00 AM","location":"KIX","description":"d","gettingThere":"g","operatingHours":"h","category":"ARRIVAL"},
-            {"time":"12:00 PM","location":"Kinkaku-ji","description":"d","gettingThere":"g","operatingHours":"h","category":"SIGHTSEEING"},
-            {"time":"06:00 PM","location":"KIX","description":"d","gettingThere":"g","operatingHours":"h","category":"DEPARTURE"}]}]}""";
+            {"time":"09:00 AM","location":"KIX","description":"d","gettingThere":"g","travelMinutesFromPrevious":0,"durationMinutes":60,"operatingHours":"h","category":"ARRIVAL"},
+            {"time":"12:00 PM","location":"Kinkaku-ji","description":"d","gettingThere":"g","travelMinutesFromPrevious":90,"durationMinutes":120,"operatingHours":"h","category":"SIGHTSEEING"},
+            {"time":"06:00 PM","location":"KIX","description":"d","gettingThere":"g","travelMinutesFromPrevious":90,"durationMinutes":60,"operatingHours":"h","category":"DEPARTURE"}]}]}""";
 
     @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     private ChatClient chatClient;
@@ -63,9 +63,9 @@ class ItineraryServiceTest {
         ItineraryValidator validator = new ItineraryValidator(new ObjectMapper());
         String bad = """
                 {"days":[{"activities":[
-                {"time":"09:00 AM","location":"Kinkaku-ji","description":"d","gettingThere":"g","operatingHours":"h","category":"SIGHTSEEING"}]},
+                {"time":"09:00 AM","location":"Kinkaku-ji","description":"d","gettingThere":"g","travelMinutesFromPrevious":0,"durationMinutes":60,"operatingHours":"h","category":"SIGHTSEEING"}]},
                 {"activities":[
-                {"time":"09:00 AM","location":"kinkaku-ji","description":"d","gettingThere":"","operatingHours":"h","category":"SIGHTSEEING"}]}]}""";
+                {"time":"09:00 AM","location":"kinkaku-ji","description":"d","gettingThere":"","travelMinutesFromPrevious":0,"durationMinutes":60,"operatingHours":"h","category":"SIGHTSEEING"}]}]}""";
 
         assertThat(validator.violations(VALID, 1)).isEmpty();
         assertThat(validator.violations(bad, 3)).containsExactlyInAnyOrder(
@@ -77,5 +77,18 @@ class ItineraryServiceTest {
         assertThat(validator.violations("not json", 1)).hasSize(1);
         assertThat(ItineraryValidator.expectedDays("Destination: Kyoto\nDays: 5\nPace: x")).isEqualTo(5);
         assertThat(ItineraryValidator.expectedDays("no days line")).isNull();
+    }
+
+    @Test
+    void validatorFlagsActivitiesScheduledWithoutTravelTime() {
+        ItineraryValidator validator = new ItineraryValidator(new ObjectMapper());
+        String rushed = VALID.replace("\"time\":\"12:00 PM\"", "\"time\":\"10:00 AM\"");
+
+        assertThat(validator.violations(rushed, 1)).containsExactly(
+                "Day 1 activity 'Kinkaku-ji' starts at 10:00 AM, but 'KIX' ends at 10:00 AM and travel takes 90 min, so it cannot start before 11:30 AM.");
+        assertThat(ItineraryValidator.minutesOfDay("12:30 AM")).isEqualTo(30);
+        assertThat(ItineraryValidator.minutesOfDay("12:15 PM")).isEqualTo(735);
+        assertThat(ItineraryValidator.minutesOfDay("18:05")).isEqualTo(1085);
+        assertThat(ItineraryValidator.minutesOfDay("Evening")).isNull();
     }
 }

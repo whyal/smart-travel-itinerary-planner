@@ -13,6 +13,13 @@ const CATEGORY_LABELS: Record<ActivityCategory, string> = {
   DEPARTURE: "Departure",
 };
 
+function formatMinutes(total: number): string {
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  if (!h) return `${m} min`;
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
+
 interface DayPlanCardProps {
   day: DayPlan;
   date?: string;
@@ -52,6 +59,9 @@ export default function DayPlanCard({ day, date }: DayPlanCardProps) {
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-bold text-blue-600 font-mono text-xs bg-blue-50 px-2 py-0.5 rounded-md">
                   {act.time}
+                  {act.durationMinutes
+                    ? ` · ${formatMinutes(act.durationMinutes)}`
+                    : ""}
                 </span>
                 <span className="text-slate-300">•</span>
                 <span className="font-bold text-slate-900 flex items-center space-x-1">
@@ -74,7 +84,12 @@ export default function DayPlanCard({ day, date }: DayPlanCardProps) {
                   {act.gettingThere && (
                     <div className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200/70 font-medium">
                       <Navigation className="w-3 h-3 text-emerald-600 shrink-0" />
-                      <span>{act.gettingThere}</span>
+                      <span>
+                        {act.travelMinutesFromPrevious
+                          ? `${formatMinutes(act.travelMinutesFromPrevious)} · `
+                          : ""}
+                        {act.gettingThere}
+                      </span>
                     </div>
                   )}
                   {act.operatingHours && (

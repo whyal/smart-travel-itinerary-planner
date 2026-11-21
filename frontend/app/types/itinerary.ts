@@ -12,6 +12,8 @@ export interface Activity {
   description: string;
   gettingThere?: string;
   operatingHours?: string;
+  travelMinutesFromPrevious?: number;
+  durationMinutes?: number;
   category?: ActivityCategory;
 }
 

@@ -14,17 +14,23 @@ public record Itinerary(
     ) {}
 
     public record Activity(
-        @JsonPropertyDescription("Chronological time or window, e.g., '09:00 AM' or '01:30 PM'")
-        String time,
-
         @JsonPropertyDescription("Clean venue or landmark name only, without labels or district prefixes, e.g. 'Osaka Castle'")
         String location,
 
+        @JsonPropertyDescription("Transit directions from the PREVIOUS activity's location to this one, e.g. 'From Osaka Castle: 15 min by JR Loop Line to Tsuruhashi, then 5 min walk'")
+        String gettingThere,
+
+        @JsonPropertyDescription("Realistic door-to-door minutes from the previous activity's location to this one; 0 for the first activity of the day")
+        Integer travelMinutesFromPrevious,
+
+        @JsonPropertyDescription("Start time, no earlier than the previous activity's start + its durationMinutes + this travelMinutesFromPrevious, e.g. '01:30 PM'")
+        String time,
+
+        @JsonPropertyDescription("Realistic minutes spent at this activity, e.g. 120 for a large museum, 60 for lunch, 45 for hotel check-in")
+        Integer durationMinutes,
+
         @JsonPropertyDescription("Concise, original synthesized itinerary description of what the traveler does here (15-25 words). Strictly do not copy verbatim text or metadata tags from reference documents.")
         String description,
-
-        @JsonPropertyDescription("Practical transit directions or walking distance, e.g., '5 min walk from Osakajokoen Station Exit 1'")
-        String gettingThere,
 
         @JsonPropertyDescription("Visiting hours, e.g., '09:00 AM - 05:00 PM' or 'Open 24 hours'")
         String operatingHours,
@@ -33,7 +39,7 @@ public record Itinerary(
         Category category
     ) {
         public Activity(String time, String location, String description) {
-            this(time, location, description, null, null, null);
+            this(location, null, null, time, null, description, null, null);
         }
     }
 

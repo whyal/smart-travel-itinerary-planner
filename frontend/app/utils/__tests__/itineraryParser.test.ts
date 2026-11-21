@@ -312,6 +312,40 @@ describe("itineraryParser", () => {
       expect(act.operatingHours).toBe("09:00 AM - 05:00 PM");
     });
 
+    it("keeps travel and duration minutes and drops invalid values", () => {
+      const raw = {
+        destination: "Osaka",
+        days: [
+          {
+            dayNumber: 1,
+            theme: "t",
+            activities: [
+              {
+                time: "09:00 AM",
+                location: "A",
+                description: "d",
+                travelMinutesFromPrevious: 0,
+                durationMinutes: "90",
+              },
+              {
+                time: "11:00 AM",
+                location: "B",
+                description: "d",
+                travelMinutesFromPrevious: "soon",
+              },
+            ],
+          },
+        ],
+      };
+
+      const [first, second] = normalizeItinerary(raw, "Osaka").days[0]
+        .activities;
+      expect(first.travelMinutesFromPrevious).toBe(0);
+      expect(first.durationMinutes).toBe(90);
+      expect(second.travelMinutesFromPrevious).toBeUndefined();
+      expect(second.durationMinutes).toBeUndefined();
+    });
+
     it("provides clean consistent UI defaults for missing transit and operating hours", () => {
       const rawMinimal = {
         destination: "Kyoto",
