@@ -31,6 +31,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -56,6 +57,25 @@ class IngestionServiceTest {
     void setUp() {
         objectMapper = new ObjectMapper();
         ingestionService = new IngestionService(vectorStore, objectMapper);
+    }
+
+    private static String uuidOf(String sourceId) {
+        return UUID.nameUUIDFromBytes(sourceId.getBytes(StandardCharsets.UTF_8)).toString();
+    }
+
+    @Test
+    @DisplayName("Readable document ids are stored as UUIDs, as PgVectorStore requires")
+    void testReadableIdsBecomeValidUuids() {
+        TravelDocumentDto doc = new TravelDocumentDto(
+                "kyoto-fushimi-inari", "Kyoto", "Fushimi Inari", "shrine", "Fushimi", "Torii gates", null, null, null, null
+        );
+
+        ingestionService.ingestDocuments(List.of(doc), null);
+
+        verify(vectorStore).add(documentsCaptor.capture());
+        Document stored = documentsCaptor.getValue().get(0);
+        assertThat(UUID.fromString(stored.getId()).toString()).isEqualTo(stored.getId());
+        assertThat(stored.getMetadata()).containsEntry("doc_id", "kyoto-fushimi-inari");
     }
 
     @Nested
@@ -104,7 +124,7 @@ class IngestionServiceTest {
             assertThat(captured).hasSize(2);
 
             Document capturedDoc1 = captured.get(0);
-            assertThat(capturedDoc1.getId()).isEqualTo("paris-eiffel");
+            assertThat(capturedDoc1.getId()).isEqualTo(uuidOf("paris-eiffel"));
             assertThat(capturedDoc1.getText())
                     .contains("Destination: Paris")
                     .contains("Title: Eiffel Tower Guide")
@@ -126,7 +146,7 @@ class IngestionServiceTest {
                     .containsEntry("architect", "Gustave Eiffel");
 
             Document capturedDoc2 = captured.get(1);
-            assertThat(capturedDoc2.getId()).isEqualTo("paris-louvre");
+            assertThat(capturedDoc2.getId()).isEqualTo(uuidOf("paris-louvre"));
             assertThat(capturedDoc2.getText())
                     .contains("Destination: Paris")
                     .contains("Title: Louvre Museum")
@@ -253,7 +273,7 @@ class IngestionServiceTest {
             verify(vectorStore, times(1)).add(documentsCaptor.capture());
             List<Document> captured = documentsCaptor.getValue();
             assertThat(captured).hasSize(1);
-            assertThat(captured.get(0).getId()).isEqualTo("kyoto-fushimi");
+            assertThat(captured.get(0).getId()).isEqualTo(uuidOf("kyoto-fushimi"));
         }
 
         @Test
@@ -302,7 +322,7 @@ class IngestionServiceTest {
             verify(vectorStore, times(1)).add(documentsCaptor.capture());
             Document captured = documentsCaptor.getValue().get(0);
 
-            assertThat(captured.getId()).isEqualTo("doc-id");
+            assertThat(captured.getId()).isEqualTo(uuidOf("doc-id"));
             assertThat(captured.getText()).doesNotContain("\u0000");
             assertThat(captured.getText()).contains("Destination: Tokyo");
             assertThat(captured.getText()).contains("Title: Senso-ji");
@@ -461,7 +481,7 @@ class IngestionServiceTest {
             List<Document> docs = documentsCaptor.getValue();
             assertThat(docs).hasSize(1);
             Document doc = docs.get(0);
-            assertThat(doc.getId()).isEqualTo("tokyo-shibuya");
+            assertThat(doc.getId()).isEqualTo(uuidOf("tokyo-shibuya"));
             assertThat(doc.getText())
                     .contains("Destination: Tokyo")
                     .contains("Title: Shibuya Crossing")
@@ -530,7 +550,7 @@ class IngestionServiceTest {
 
             verify(vectorStore, times(1)).add(documentsCaptor.capture());
             Document doc = documentsCaptor.getValue().get(0);
-            assertThat(doc.getId()).isEqualTo("seoul-tower");
+            assertThat(doc.getId()).isEqualTo(uuidOf("seoul-tower"));
             assertThat(doc.getMetadata()).containsEntry("destination", "Seoul");
         }
 
@@ -589,7 +609,7 @@ class IngestionServiceTest {
             assertThat(count).isEqualTo(1);
             verify(vectorStore, times(1)).add(documentsCaptor.capture());
             Document doc = documentsCaptor.getValue().get(0);
-            assertThat(doc.getId()).isEqualTo("london-eye");
+            assertThat(doc.getId()).isEqualTo(uuidOf("london-eye"));
             assertThat(doc.getMetadata()).containsEntry("destination", "London");
         }
 

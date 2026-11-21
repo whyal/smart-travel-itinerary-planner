@@ -69,7 +69,7 @@ class ItineraryServiceTest {
 
         assertThat(validator.violations(VALID, 1)).isEmpty();
         assertThat(validator.violations(bad, 3)).containsExactlyInAnyOrder(
-                "The 'days' array has 2 days but exactly 3 were requested.",
+                "The 'days' array has 2 days but exactly 3 were requested. Add day 3 with new venues, and move CHECK_OUT and DEPARTURE to day 3.",
                 "Day 2 activity 'kinkaku-ji' is missing 'gettingThere'.",
                 "Day 2 repeats venue 'kinkaku-ji', which already appears earlier in the trip.",
                 "Day 1 must begin with an ARRIVAL activity.",
@@ -77,6 +77,13 @@ class ItineraryServiceTest {
         assertThat(validator.violations("not json", 1)).hasSize(1);
         assertThat(ItineraryValidator.expectedDays("Destination: Kyoto\nDays: 5\nPace: x")).isEqualTo(5);
         assertThat(ItineraryValidator.expectedDays("no days line")).isNull();
+    }
+
+    @Test
+    void dayChecklistSpellsOutEveryDayNumber() {
+        assertThat(ItineraryService.dayChecklist(3))
+                .contains("exactly 3 days", "dayNumber 1, 2, 3, in that order", "Only day 3 has CHECK_OUT");
+        assertThat(ItineraryService.dayChecklist(null)).isEmpty();
     }
 
     @Test

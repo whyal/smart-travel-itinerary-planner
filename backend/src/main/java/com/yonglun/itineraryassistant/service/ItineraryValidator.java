@@ -45,7 +45,10 @@ public class ItineraryValidator {
             return List.of("The 'days' array is missing or empty.");
         }
         if (expectedDays != null && days.size() != expectedDays) {
-            problems.add("The 'days' array has " + days.size() + " days but exactly " + expectedDays + " were requested.");
+            problems.add("The 'days' array has " + days.size() + " days but exactly " + expectedDays + " were requested."
+                    + (days.size() < expectedDays
+                    ? " Add " + (days.size() + 1 == expectedDays ? "day " + expectedDays : "days " + (days.size() + 1) + " to " + expectedDays) + " with new venues, and move CHECK_OUT and DEPARTURE to day " + expectedDays + "."
+                    : " Remove every day after day " + expectedDays + " and end day " + expectedDays + " with CHECK_OUT and DEPARTURE."));
         }
 
         Set<String> seenVenues = new HashSet<>();

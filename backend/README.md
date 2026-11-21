@@ -87,7 +87,7 @@ backend/src/main/java/com/yonglun/itineraryassistant/
 | Variable | Description | Default | Required? |
 | :--- | :--- | :--- | :--- |
 | `GEMINI_API_KEY` | API key for Google Gemini GenAI chat & cloud embeddings | — | Yes (if using Google) |
-| `API_KEY` | Shared key required in the `X-Api-Key` header on every `/api/**` request | `dev-local-key` | Set a unique value outside local dev |
+| `API_KEY` | Shared key required in the `X-Api-Key` header on every `/api/**` request | — | Yes ([details](../docs/API.md)) |
 | `CORS_ALLOWED_ORIGINS` | Comma-separated frontend origins allowed to call the API | `http://localhost:3000` | No |
 | `DB_USERNAME` | PostgreSQL database user | — | Yes |
 | `DB_PASSWORD` | PostgreSQL database password | — | Yes |

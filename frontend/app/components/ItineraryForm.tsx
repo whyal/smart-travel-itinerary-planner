@@ -291,7 +291,12 @@ Generate a ${formData.days}-day itinerary matching these constraints.`;
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
-    const currentSessionId = conversationId || crypto.randomUUID();
+    if (conversationId) {
+      localStorage.removeItem(`itinerary_saved_${conversationId}`);
+    }
+    const currentSessionId = crypto.randomUUID();
+    localStorage.setItem("itinerary_conversation_id", currentSessionId);
+    setConversationId(currentSessionId);
 
     let accumulatedText = "";
     let finalParsedItinerary: ItineraryResponse | null = null;

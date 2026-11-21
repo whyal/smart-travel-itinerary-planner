@@ -49,7 +49,7 @@ spring:
 
 app:
   security:
-    api-key: ${API_KEY:dev-local-key}
+    api-key: ${API_KEY}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
   chat:

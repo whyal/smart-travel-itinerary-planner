@@ -258,6 +258,52 @@ describe("ItineraryForm Component", () => {
       expect(screen.getByLabelText(/interests/i)).toHaveValue("");
     });
 
+    it("keeps both itineraries in history when generating twice in one session", async () => {
+      const user = userEvent.setup();
+      const streamFor = (destination: string, location: string) => ({
+        ok: true,
+        body: {
+          getReader: () =>
+            createMockStreamReader([
+              `data:${JSON.stringify({
+                destination,
+                days: [
+                  {
+                    dayNumber: 1,
+                    theme: "Day one",
+                    activities: [{ time: "09:00 AM", location, description: "Visit" }],
+                  },
+                ],
+              })}\n`,
+            ]),
+        },
+      });
+      (global.fetch as jest.Mock)
+        .mockResolvedValueOnce(streamFor("Osaka", "Osaka Castle"))
+        .mockResolvedValueOnce(streamFor("Kyoto", "Kinkaku-ji"));
+
+      render(<ItineraryForm />);
+      const generate = screen.getByRole("button", {
+        name: /generate streamed itinerary/i,
+      });
+      await user.click(generate);
+      await waitFor(() => expect(screen.getByText(/Osaka Castle/i)).toBeInTheDocument());
+      await user.type(screen.getByLabelText(/destination/i), "Kyoto");
+      await user.type(screen.getByLabelText(/interests/i), "Temples");
+      await user.click(generate);
+      await waitFor(() => expect(screen.getByText(/Kinkaku-ji/i)).toBeInTheDocument());
+
+      const history = JSON.parse(localStorage.getItem("itinerary_history_list") ?? "[]");
+      expect(history.map((h: { itinerary: { destination: string } }) => h.itinerary.destination)).toEqual([
+        "Kyoto",
+        "Osaka",
+      ]);
+      const ids = (global.fetch as jest.Mock).mock.calls.map(
+        (c) => JSON.parse(c[1].body).conversationId,
+      );
+      expect(ids[0]).not.toEqual(ids[1]);
+    });
+
     it("handles server HTTP error response during form submit", async () => {
       const consoleErrorSpy = jest
         .spyOn(console, "error")

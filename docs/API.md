@@ -6,7 +6,7 @@ All endpoints accept and return JSON unless explicitly specified otherwise (such
 
 ## Authentication
 
-Every `/api/**` request must send an `X-Api-Key` header matching the backend `API_KEY` environment variable (default `dev-local-key`). The frontend reads it from `NEXT_PUBLIC_API_KEY`. Requests without it get `401`. For `curl`, add `-H "X-Api-Key: $API_KEY"`.
+Every `/api/**` request must send an `X-Api-Key` header matching the backend `API_KEY` environment variable, which has no default: the backend refuses to start without it. The frontend reads it from `NEXT_PUBLIC_API_KEY`, which Next.js embeds in the browser bundle, so on a public deployment anyone can read the key; it only keeps out clients that never loaded the site. Requests without it get `401`. For `curl`, add `-H "X-Api-Key: $API_KEY"`.
 
 ## Endpoint Summary
 
@@ -162,6 +162,8 @@ Ingests an array of rich travel items into the vector store.
 ]
 ```
 
+`id` is optional. When given, the stored row id is a UUID derived from it, so re-sending the same `id` updates the same row; the original value is kept in `metadata.doc_id`.
+
 ### B. Ingest Free-Form Articles (`POST /api/knowledge/articles`)
 
 Quickly ingests raw blog posts or guide notes.
@@ -224,9 +226,10 @@ Runs a semantic vector query directly without calling the chat generation model.
 ```json
 [
   {
-    "id": "kyoto-ryoanji",
+    "id": "9d15d113-eafb-3ec5-99bc-5cc2a10cd030",
     "content": "Ryoan-ji is renowned for its famous dry landscape rock garden...",
     "metadata": {
+      "doc_id": "kyoto-ryoanji",
       "destination": "Kyoto",
       "title": "Ryoan-ji Temple",
       "category": "temple",

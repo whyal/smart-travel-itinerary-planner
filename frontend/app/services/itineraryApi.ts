@@ -19,7 +19,7 @@ export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
 export const apiHeaders = (extra: Record<string, string> = {}) => ({
-  "X-Api-Key": process.env.NEXT_PUBLIC_API_KEY || "dev-local-key",
+  "X-Api-Key": process.env.NEXT_PUBLIC_API_KEY ?? "",
   ...extra,
 });
 

@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Service
 public class ItineraryService {
@@ -51,16 +53,29 @@ public class ItineraryService {
 
     public Flux<String> streamItinerary(String prompt) {
         StringBuilder draft = new StringBuilder();
-        return generate(systemPrompt, prompt)
+        Integer expectedDays = ItineraryValidator.expectedDays(prompt);
+        String system = systemPrompt + dayChecklist(expectedDays);
+        return generate(system, prompt)
                 .doOnNext(draft::append)
                 .concatWith(Flux.defer(() -> {
-                    List<String> problems = validator.violations(draft.toString(), ItineraryValidator.expectedDays(prompt));
+                    List<String> problems = validator.violations(draft.toString(), expectedDays);
                     if (problems.isEmpty()) {
                         return Flux.empty();
                     }
                     log.warn("Itinerary draft failed validation, retrying once: {}", problems);
-                    return Flux.just(RETRY_MARKER).concatWith(generate(repairSystemPrompt(draft, problems), prompt));
+                    return Flux.just(RETRY_MARKER).concatWith(generate(repairSystemPrompt(system, draft, problems), prompt));
                 }));
+    }
+
+    // Small models miscount long arrays; spelling out every dayNumber keeps them from collapsing days.
+    static String dayChecklist(Integer days) {
+        if (days == null || days < 1) {
+            return "";
+        }
+        String numbers = IntStream.rangeClosed(1, days).mapToObj(String::valueOf).collect(Collectors.joining(", "));
+        return "\n\nThis trip has exactly " + days + " days. The 'days' array MUST contain " + days
+                + " objects with dayNumber " + numbers + ", in that order. Only day " + days
+                + " has CHECK_OUT and DEPARTURE.";
     }
 
     private Flux<String> generate(String system, String user) {
@@ -72,10 +87,10 @@ public class ItineraryService {
     }
 
     // Repair notes go in the system message so RAG retrieval still searches on the original user prompt.
-    private String repairSystemPrompt(CharSequence draft, List<String> problems) {
-        return systemPrompt + "\n\nYour previous attempt below broke these rules:\n- "
+    private static String repairSystemPrompt(String system, CharSequence draft, List<String> problems) {
+        return system + "\n\nYour previous attempt below broke these rules:\n- "
                 + String.join("\n- ", problems)
                 + "\n\nPrevious attempt:\n" + draft
-                + "\n\nReturn the complete corrected itinerary JSON. Fix these problems and keep everything else unchanged.";
+                + "\n\nReturn the complete corrected itinerary JSON. Fix these problems and keep the activities that broke no rule.";
     }
 }

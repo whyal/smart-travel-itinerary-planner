@@ -24,7 +24,7 @@ Set the backend API URL:
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:8080/api
-NEXT_PUBLIC_API_KEY=dev-local-key
+NEXT_PUBLIC_API_KEY=same-value-as-backend-API_KEY
 ```
 
 ### 2. Install Dependencies

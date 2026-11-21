@@ -31,6 +31,7 @@ From the `backend/` folder:
 export GEMINI_API_KEY="your-gemini-api-key"
 export DB_USERNAME="postgres"
 export DB_PASSWORD="your_postgres_password"
+export API_KEY="pick-any-local-key"   # required; the backend will not start without it
 
 # Launch the backend
 ./gradlew bootRun
@@ -44,6 +45,7 @@ In a new terminal window:
 
 ```bash
 cd frontend
+echo "NEXT_PUBLIC_API_KEY=pick-any-local-key" > .env.local   # same value as the backend API_KEY
 npm install   # (only needed the first time)
 npm run dev
 ```

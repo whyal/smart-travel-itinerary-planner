@@ -190,13 +190,15 @@ public class IngestionService {
         dest = hasText(dest) ? dest.trim() : "General";
         String content = (item.content() != null) ? sanitizeText(item.content()).trim() : "";
         String title = (item.title() != null) ? sanitizeText(item.title()).trim() : "";
-        String docId = hasText(item.id())
-                ? sanitizeText(item.id()).trim()
+        String sourceId = hasText(item.id()) ? sanitizeText(item.id()).trim() : null;
+        // PgVectorStore ids are UUIDs, so readable ids like "kyoto-ryoanji" are hashed and kept in doc_id.
+        String docId = sourceId != null
+                ? UUID.nameUUIDFromBytes(sourceId.getBytes(StandardCharsets.UTF_8)).toString()
                 : generateDeterministicId(dest, title, content);
 
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("destination", dest);
-        metadata.put("doc_id", docId);
+        metadata.put("doc_id", sourceId != null ? sourceId : docId);
         metadata.put("type", "travel_guide");
 
         putIfText(metadata, "title", sanitizeText(item.title()));
