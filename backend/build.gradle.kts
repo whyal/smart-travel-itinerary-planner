@@ -49,6 +49,7 @@ dependencies {
     implementation("org.springframework.ai:spring-ai-vector-store-advisor")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("com.tngtech.archunit:archunit-junit5:1.5.1")
     testRuntimeOnly("com.h2database:h2")
 }
 
