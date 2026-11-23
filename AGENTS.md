@@ -27,7 +27,7 @@ When working on specific subsystems, strictly adhere to the domain boundary file
 All AI agents and models working on this codebase **MUST** follow these invariants:
 
 1. 🚫 **No Hardcoded Secrets or Local Endpoints**:
-   - Never commit API keys (`GEMINI_API_KEY`, etc.) or hardcode local URLs.
+   - Never commit API keys (`GEMINI_API_KEY`, etc.) or hardcode local URLs. Committed secrets are caught by gitleaks ([`.gitleaks.toml`](.gitleaks.toml)) in CI and in the pre-commit hook.
    - Always resolve environment variables with sensible defaults (e.g. `process.env.NEXT_PUBLIC_API_URL` or `${SPRING_DATASOURCE_URL:...}`).
 2. 🚫 **No Cross-Layer Boundary Violations**:
    - Keep Frontend (client UI/state/SSE parsing) and Backend (business logic/PostgreSQL/VectorStore/AI ChatClient) decoupled.

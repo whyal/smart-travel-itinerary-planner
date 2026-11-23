@@ -21,18 +21,17 @@ The backend is a reactive and RESTful travel itinerary service integrating Sprin
 
 ## 2. Hard Boundaries & Invariants (MUST FOLLOW)
 
+Records-only DTOs, no service/repository dependency on controllers, and no `new ObjectMapper()` outside `config` are enforced by [`ArchitectureTest`](src/test/java/com/yonglun/itineraryassistant/ArchitectureTest.java).
+
 ### ✅ Architectural Requirements (DO)
-- **Use Immutable Records for DTOs**: All request/response contracts in `com.yonglun.itineraryassistant.dto` must be Java `record` types with Jakarta Validation annotations (`@NotBlank`, `@Min`, etc.).
+- **Validate DTOs**: Annotate request records in `com.yonglun.itineraryassistant.dto` with Jakarta Validation (`@NotBlank`, `@Min`, etc.).
 - **Dynamic Table Isolation**: Always route vector operations through `embeddingProperties.getEffectiveTableName()` to guarantee different embedding models reside in separate vector tables (`vector_store_{provider}_{dimensions}`).
 - **Index Threshold Awareness**: Maintain HNSW indexing for `dimensions <= 2000` and `NONE` (flat scan) for `dimensions > 2000` (e.g. Gemini 3072 dims).
 - **Spring AI `@Primary` Resolution**: Whenever defining starter beans with potential classpath ambiguities, ensure `@Primary` is explicitly declared.
-- **Use Spring-Managed Beans**: Always inject the Spring-managed `ObjectMapper` rather than instantiating new instances.
 
 ### 🚫 Forbidden Patterns (DO NOT)
 - **DO NOT hardcode database tables**: Never write raw table names like `"vector_store"` in queries; always use `EmbeddingProperties`.
 - **DO NOT break SSE Streaming Protocol**: SSE endpoints must produce `MediaType.TEXT_EVENT_STREAM_VALUE` and return raw string chunks without Markdown code block wrappers (` ```json `).
-- **DO NOT create circular dependencies**: Controllers $\rightarrow$ Services $\rightarrow$ Repositories/VectorStore. Never inject controllers into services.
-- **DO NOT add unnecessary comments in source code**: Code should be self-documenting. Avoid trivial line-by-line comments, obvious step descriptions, or decorative separators unless explaining non-obvious business logic or workarounds.
 
 ## 3. Embedding Model Switching Recipes (Zero Code Changes)
 

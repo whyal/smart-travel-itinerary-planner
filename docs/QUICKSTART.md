@@ -9,6 +9,7 @@ Make sure you have:
 - **Docker Desktop** installed and running
 - **Java 25+** (`java -version`)
 - **Node.js 18+** (`node -v`)
+- **gitleaks** (optional, `winget install Gitleaks.Gitleaks` or `brew install gitleaks`) so the pre-commit hook scans staged changes for secrets; without it the scan only runs in CI
 
 ### Step 1: Start the Database (PostgreSQL + pgvector)
 
@@ -163,6 +164,7 @@ If you prefer editing configuration files instead of exporting terminal variable
 | :--- | :--- |
 | [`backend/src/main/resources/application.yaml`](../backend/src/main/resources/application.yaml) | Main backend configuration where default model, dimensions, and URLs are set. |
 | [`backend/.env`](../backend/.env) | Local database credentials and API keys. |
+| [`.gitleaks.toml`](../.gitleaks.toml) | Secret-scan rules (gitleaks defaults plus false-positive allowlist). |
 | [`frontend/app/services/itineraryApi.ts`](../frontend/app/services/itineraryApi.ts) | Frontend API connection (defaults to `http://localhost:8080/api`). |
 
 ## 5. Troubleshooting & FAQ

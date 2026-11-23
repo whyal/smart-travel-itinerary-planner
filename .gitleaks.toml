@@ -1,0 +1,6 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "LLM prompt text in ItineraryService mentions 'API' next to 'RFC8259-compliant'"
+regexes = ['''RFC8259-compliant''']

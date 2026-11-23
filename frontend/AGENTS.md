@@ -21,24 +21,18 @@ The frontend client provides an interactive, real-time travel planning interface
 
 ## 2. Hard Boundaries & Invariants (MUST FOLLOW)
 
+No `any`, no synchronous `setState` in `useEffect`, no hardcoded localhost URLs outside `app/services`, and Server-Component-only `page.tsx`/`layout.tsx` are enforced by `npm run lint` ([`eslint.config.mjs`](eslint.config.mjs)); a missing `"use client"` fails `npm run build`.
+
 ### ✅ Architectural Requirements (DO)
-- **Strict TypeScript Typing**: Keep TypeScript `strict: true`. Define explicit types in [`app/types/itinerary.ts`](app/types/itinerary.ts) matching backend DTO records. Avoid using `any`.
-- **Server vs. Client Component Separation**:
-  - `app/page.tsx` and `app/layout.tsx` MUST remain **Server Components**.
-  - Interactive components MUST explicitly declare `"use client"` at the top of the file.
+- **Shared Types**: Define types in [`app/types/itinerary.ts`](app/types/itinerary.ts) matching backend DTO records.
 - **SSE Stream Lifecycle Management**:
   - Always maintain an `AbortController` instance.
   - Abort active streams when a user cancels or when the component unmounts.
-- **Environment URL Resolution**:
-  - Always resolve backend endpoints via `process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api"`.
 - **Session Isolation**:
   - Always generate and pass a unique `conversationId` UUID per session to preserve chat memory isolation on the backend.
 
 ### 🚫 Forbidden Patterns (DO NOT)
-- **DO NOT trigger synchronous state updates in `useEffect`**: Prevent cascading render loops.
 - **DO NOT duplicate Save buttons**: Ensure save-to-database actions are centralized in [`ItineraryOutputView`](app/components/itinerary/ItineraryOutputView.tsx) and [`ItineraryHistory`](app/components/ItineraryHistory.tsx).
-- **DO NOT hardcode API URLs in components**: Always use [`itineraryApi.ts`](app/services/itineraryApi.ts) or the centralized environment variable.
-- **DO NOT add unnecessary comments in source code**: Code should be self-documenting. Avoid trivial inline comments, play-by-play notes, or redundant JSDoc unless explaining complex workarounds or essential caveats.
 
 ## 3. Verification & Validation Commands
 
