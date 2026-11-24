@@ -5,19 +5,29 @@ import {
   unwrapItineraryObject,
   isValidItinerary,
   normalizeItinerary,
-  stripDocumentMetadataPrefixes,
   getProperty,
+  stripMetadataHeader,
 } from "../itineraryParser";
 
 describe("itineraryParser", () => {
   describe("getProperty resilience", () => {
     it("retrieves property values despite surrounding whitespace or newlines in keys", () => {
       const obj = {
-        "\nactivities\n": [{ time: "09:00 AM", location: "Beijing", description: "Visit Forbidden City" }],
+        "\nactivities\n": [
+          {
+            time: "09:00 AM",
+            location: "Beijing",
+            description: "Visit Forbidden City",
+          },
+        ],
         " destination ": "Beijing",
       };
       expect(getProperty(obj, "activities")).toEqual([
-        { time: "09:00 AM", location: "Beijing", description: "Visit Forbidden City" },
+        {
+          time: "09:00 AM",
+          location: "Beijing",
+          description: "Visit Forbidden City",
+        },
       ]);
       expect(getProperty(obj, "destination")).toBe("Beijing");
     });
@@ -49,9 +59,13 @@ describe("itineraryParser", () => {
     });
 
     it("strips metadata headers and excessive whitespace from single string values", () => {
-      expect(stripDocumentMetadataPrefixes("Title: Osaka Castle (District: Chuo)")).toBe("Osaka Castle");
-      expect(stripDocumentMetadataPrefixes("  Transit:   Take subway line   ")).toBe("Take subway line");
-      expect(stripDocumentMetadataPrefixes("")).toBe("");
+      expect(stripMetadataHeader("Title: Osaka Castle (District: Chuo)")).toBe(
+        "Osaka Castle",
+      );
+      expect(stripMetadataHeader("  Transit:   Take subway line   ")).toBe(
+        "Take subway line",
+      );
+      expect(stripMetadataHeader("")).toBe("");
     });
   });
 
@@ -140,7 +154,12 @@ describe("itineraryParser", () => {
             dayNumber: 1,
             theme: "T",
             activities: [
-              { time: "09:00 AM", location: "X", description: "d", category: "SHOPPING" },
+              {
+                time: "09:00 AM",
+                location: "X",
+                description: "d",
+                category: "SHOPPING",
+              },
             ],
           },
         ],
@@ -246,7 +265,10 @@ describe("itineraryParser", () => {
         {
           destination: "Osaka",
           days: [
-            { dayNumber: 1, activities: [{ time: "09:00 AM", location: "Osaka Castle" }] },
+            {
+              dayNumber: 1,
+              activities: [{ time: "09:00 AM", location: "Osaka Castle" }],
+            },
             {
               dayNumber: 2,
               activities: [
@@ -258,7 +280,9 @@ describe("itineraryParser", () => {
         },
         "Osaka",
       );
-      expect(normalized.days[1].activities.map((a) => a.location)).toEqual(["Dotonbori"]);
+      expect(normalized.days[1].activities.map((a) => a.location)).toEqual([
+        "Dotonbori",
+      ]);
     });
 
     it("normalizes activities structured as time-slot object maps", () => {
@@ -270,7 +294,10 @@ describe("itineraryParser", () => {
             theme: "Tokyo Highlights",
             activities: {
               Morning: { location: "Senso-ji", description: "Historic temple" },
-              Afternoon: { location: "Akihabara", description: "Electronics district" },
+              Afternoon: {
+                location: "Akihabara",
+                description: "Electronics district",
+              },
             },
           },
         ],
@@ -439,9 +466,17 @@ Let me know if you need modifications!
     });
 
     it("returns null for prose or truncated JSON instead of inventing a plan", () => {
-      expect(parseItineraryFromText("Sorry, I cannot help with that request.", "Prague")).toBeNull();
       expect(
-        parseItineraryFromText('{"destination":"Prague","days":[{"dayNumber":1,"theme":"Old Town","activities":[{"time":"09:00 AM","loc', "Prague"),
+        parseItineraryFromText(
+          "Sorry, I cannot help with that request.",
+          "Prague",
+        ),
+      ).toBeNull();
+      expect(
+        parseItineraryFromText(
+          '{"destination":"Prague","days":[{"dayNumber":1,"theme":"Old Town","activities":[{"time":"09:00 AM","loc',
+          "Prague",
+        ),
       ).toBeNull();
     });
   });

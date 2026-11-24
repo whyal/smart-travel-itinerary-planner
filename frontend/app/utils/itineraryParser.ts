@@ -22,7 +22,9 @@ export const LOGISTICS_CATEGORIES: readonly ActivityCategory[] = [
 ];
 
 function parseCategory(val: unknown): ActivityCategory | undefined {
-  const normalized = cleanStringValue(val).toUpperCase().replace(/[\s-]+/g, "_");
+  const normalized = cleanStringValue(val)
+    .toUpperCase()
+    .replace(/[\s-]+/g, "_");
   return CATEGORIES.find((c) => c === normalized);
 }
 
@@ -81,10 +83,6 @@ export function cleanDocumentDescription(
     return `Explore ${fallbackLocation}.`;
   }
   return cleaned;
-}
-
-export function stripDocumentMetadataPrefixes(text: unknown): string {
-  return stripMetadataHeader(text);
 }
 
 export function sanitizeJsonString(str: string): string {
@@ -241,14 +239,7 @@ export function normalizeItinerary(
   } else if (typeof unwrapped === "object" && unwrapped !== null) {
     const target = unwrapped as Record<string, unknown>;
     dest = cleanStringValue(
-      getProperty(
-        target,
-        "destination",
-        "city",
-        "location",
-        "title",
-        "dest",
-      ) ||
+      getProperty(target, "destination", "city", "location", "title", "dest") ||
         defaultDestination ||
         "Trip Plan",
     );
@@ -311,7 +302,9 @@ export function normalizeItinerary(
         "date",
       ) || `Day ${dayNum}`,
     );
-    const theme = rawTheme.replace(/^(?:Day\s*\d+[:\s-]*|Theme[:\s-]*)/i, "").trim() || `Day ${dayNum} Highlights`;
+    const theme =
+      rawTheme.replace(/^(?:Day\s*\d+[:\s-]*|Theme[:\s-]*)/i, "").trim() ||
+      `Day ${dayNum} Highlights`;
 
     const rawActivities = getProperty(
       item,
@@ -338,14 +331,12 @@ export function normalizeItinerary(
     if (Array.isArray(rawActivities)) {
       candidateActivities = rawActivities;
     } else if (typeof rawActivities === "object" && rawActivities !== null) {
-      candidateActivities = Object.entries(rawActivities).map(
-        ([slot, val]) => {
-          if (typeof val === "object" && val !== null) {
-            return { time: slot, ...(val as Record<string, unknown>) };
-          }
-          return { time: slot, description: String(val) };
-        },
-      );
+      candidateActivities = Object.entries(rawActivities).map(([slot, val]) => {
+        if (typeof val === "object" && val !== null) {
+          return { time: slot, ...(val as Record<string, unknown>) };
+        }
+        return { time: slot, description: String(val) };
+      });
     } else {
       const slotKeys = ["morning", "afternoon", "evening", "night"];
       const foundSlots = slotKeys.filter((k) => k in item && item[k]);
@@ -361,104 +352,112 @@ export function normalizeItinerary(
       }
     }
 
-    const activities: Activity[] = candidateActivities.map((a: unknown, actIdx: number) => {
-      if (typeof a === "string") {
-        const cleanDesc = cleanDocumentDescription(a, cleanStringValue(dest));
+    const activities: Activity[] = candidateActivities.map(
+      (a: unknown, actIdx: number) => {
+        if (typeof a === "string") {
+          const cleanDesc = cleanDocumentDescription(a, cleanStringValue(dest));
+          return {
+            time:
+              ["09:00 AM", "01:00 PM", "04:30 PM", "07:30 PM"][actIdx] ||
+              "Flexible",
+            location: cleanStringValue(dest),
+            description: cleanDesc,
+            gettingThere: "Accessible via local transit or walking",
+            operatingHours: "Flexible / General visiting hours",
+          };
+        }
+        const actObj = (typeof a === "object" && a !== null ? a : {}) as Record<
+          string,
+          unknown
+        >;
+
+        let gettingThere = stripMetadataHeader(
+          cleanStringValue(
+            getProperty(
+              actObj,
+              "gettingThere",
+              "getting_there",
+              "transit",
+              "transport",
+              "howToGetThere",
+              "how_to_get_there",
+            ) || "",
+          ),
+        );
+        let operatingHours = stripMetadataHeader(
+          cleanStringValue(
+            getProperty(
+              actObj,
+              "operatingHours",
+              "operating_hours",
+              "openingHours",
+              "opening_hours",
+              "hours",
+            ) || "",
+          ),
+        );
+
+        let description = cleanDocumentDescription(
+          getProperty(
+            actObj,
+            "description",
+            "details",
+            "activity",
+            "title",
+            "name",
+          ) || "",
+        );
+
+        if (!gettingThere && description) {
+          const transitMatch = description.match(
+            /(?:getting there|transit|transport):\s*([^.]+)/i,
+          );
+          if (transitMatch) {
+            gettingThere = transitMatch[1].trim();
+            description = description.replace(transitMatch[0], "").trim();
+          }
+        }
+
+        if (!operatingHours && description) {
+          const hoursMatch = description.match(
+            /(?:operating hours|opening hours|hours):\s*([^.]+)/i,
+          );
+          if (hoursMatch) {
+            operatingHours = hoursMatch[1].trim();
+            description = description.replace(hoursMatch[0], "").trim();
+          }
+        }
+
+        const rawLocation = cleanStringValue(
+          getProperty(actObj, "location", "place", "spot", "venue") || dest,
+        );
+        const location = stripMetadataHeader(rawLocation) || dest;
+
+        let time = cleanStringValue(
+          getProperty(actObj, "time", "timeOfDay", "time_of_day", "hour") || "",
+        );
+        time = time.replace(/^(?:time|time of day):\s*/i, "").trim();
+        if (!time || time.toLowerCase() === "flexible") {
+          time =
+            ["09:00 AM", "01:00 PM", "04:30 PM", "07:30 PM"][actIdx] ||
+            "Flexible";
+        }
+
         return {
-          time: ["09:00 AM", "01:00 PM", "04:30 PM", "07:30 PM"][actIdx] || "Flexible",
-          location: cleanStringValue(dest),
-          description: cleanDesc,
-          gettingThere: "Accessible via local transit or walking",
-          operatingHours: "Flexible / General visiting hours",
+          time,
+          location,
+          description: description || `Explore ${location}.`,
+          gettingThere:
+            gettingThere || "Accessible via local transit or walking",
+          operatingHours: operatingHours || "Flexible / General visiting hours",
+          travelMinutesFromPrevious: toMinutes(
+            getProperty(actObj, "travelMinutesFromPrevious"),
+          ),
+          durationMinutes: toMinutes(getProperty(actObj, "durationMinutes")),
+          category: parseCategory(getProperty(actObj, "category", "type")),
         };
-      }
-      const actObj = (
-        typeof a === "object" && a !== null ? a : {}
-      ) as Record<string, unknown>;
-
-      let gettingThere = stripMetadataHeader(
-        cleanStringValue(
-          getProperty(
-            actObj,
-            "gettingThere",
-            "getting_there",
-            "transit",
-            "transport",
-            "howToGetThere",
-            "how_to_get_there",
-          ) || "",
-        ),
-      );
-      let operatingHours = stripMetadataHeader(
-        cleanStringValue(
-          getProperty(
-            actObj,
-            "operatingHours",
-            "operating_hours",
-            "openingHours",
-            "opening_hours",
-            "hours",
-          ) || "",
-        ),
-      );
-
-      let description = cleanDocumentDescription(
-        getProperty(
-          actObj,
-          "description",
-          "details",
-          "activity",
-          "title",
-          "name",
-        ) || "",
-      );
-
-      if (!gettingThere && description) {
-        const transitMatch = description.match(
-          /(?:getting there|transit|transport):\s*([^.]+)/i,
-        );
-        if (transitMatch) {
-          gettingThere = transitMatch[1].trim();
-          description = description.replace(transitMatch[0], "").trim();
-        }
-      }
-
-      if (!operatingHours && description) {
-        const hoursMatch = description.match(
-          /(?:operating hours|opening hours|hours):\s*([^.]+)/i,
-        );
-        if (hoursMatch) {
-          operatingHours = hoursMatch[1].trim();
-          description = description.replace(hoursMatch[0], "").trim();
-        }
-      }
-
-      const rawLocation = cleanStringValue(
-        getProperty(actObj, "location", "place", "spot", "venue") || dest,
-      );
-      const location = stripMetadataHeader(rawLocation) || dest;
-
-      let time = cleanStringValue(
-        getProperty(actObj, "time", "timeOfDay", "time_of_day", "hour") || "",
-      );
-      time = time.replace(/^(?:time|time of day):\s*/i, "").trim();
-      if (!time || time.toLowerCase() === "flexible") {
-        time = ["09:00 AM", "01:00 PM", "04:30 PM", "07:30 PM"][actIdx] || "Flexible";
-      }
-
-      return {
-        time,
-        location,
-        description: description || `Explore ${location}.`,
-        gettingThere: gettingThere || "Accessible via local transit or walking",
-        operatingHours: operatingHours || "Flexible / General visiting hours",
-        travelMinutesFromPrevious: toMinutes(
-          getProperty(actObj, "travelMinutesFromPrevious"),
-        ),
-        durationMinutes: toMinutes(getProperty(actObj, "durationMinutes")),
-        category: parseCategory(getProperty(actObj, "category", "type")),
-      };
-    });
+      },
+    );
 
     return {
       dayNumber: isNaN(dayNum) ? idx + 1 : dayNum,
