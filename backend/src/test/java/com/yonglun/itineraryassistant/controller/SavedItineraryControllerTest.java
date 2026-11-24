@@ -18,11 +18,10 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.time.Instant;
 import java.util.List;
 
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -86,26 +85,5 @@ class SavedItineraryControllerTest {
                 .andExpect(jsonPath("$.formData.pace", is("Moderate")))
                 .andExpect(jsonPath("$.itinerary.destination", is("Paris")))
                 .andExpect(jsonPath("$.rawText", is("Day 1: Art & History...")));
-    }
-
-    @Test
-    void testGetAllAndFilterByConversationId() throws Exception {
-        ItineraryFormDataDto formData = new ItineraryFormDataDto("Tokyo", 5, "Fast", "Anime", "High", null, null);
-        Itinerary itinerary = new Itinerary("Tokyo", List.of());
-
-        SavedItineraryResponse res1 = new SavedItineraryResponse(1L, "session-1", "Tokyo", 5, formData, itinerary, "text1", Instant.now());
-        SavedItineraryResponse res2 = new SavedItineraryResponse(2L, "session-2", "Kyoto", 3, formData, itinerary, "text2", Instant.now());
-
-        when(service.getAllSavedItineraries()).thenReturn(List.of(res1, res2));
-        when(service.getSavedItinerariesByConversationId(eq("session-1"))).thenReturn(List.of(res1));
-
-        mockMvc.perform(get("/api/itineraries"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(2)));
-
-        mockMvc.perform(get("/api/itineraries").param("conversationId", "session-1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].conversationId", is("session-1")));
     }
 }

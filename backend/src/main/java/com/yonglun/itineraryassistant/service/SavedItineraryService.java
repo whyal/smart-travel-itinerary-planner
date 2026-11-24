@@ -14,8 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
 
 @Service
 public class SavedItineraryService {
@@ -32,48 +30,20 @@ public class SavedItineraryService {
 
     @Transactional
     public SavedItineraryResponse saveItinerary(SaveItineraryRequest request) {
-        SavedItinerary entity = new SavedItinerary(
-                null,
-                sanitizeText(request.conversationId()),
-                sanitizeText(request.destination()),
-                request.daysCount(),
-                toJson(request.formData()),
-                toJson(request.itinerary()),
-                sanitizeText(request.rawText()),
-                parseInstant(request.createdAt())
-        );
+        String formDataJson = toJson(request.formData());
+        String itineraryJson = toJson(request.itinerary());
+        String conversationId = sanitizeText(request.conversationId());
+        SavedItinerary entity = conversationId == null ? new SavedItinerary()
+                : repository.findFirstByConversationIdOrderByIdDesc(conversationId).orElseGet(SavedItinerary::new);
+        entity.setConversationId(conversationId);
+        entity.setDestination(sanitizeText(request.destination()));
+        entity.setDaysCount(request.daysCount());
+        entity.setFormDataJson(formDataJson);
+        entity.setItineraryJson(itineraryJson);
+        entity.setRawText(sanitizeText(request.rawText()));
+        entity.setCreatedAt(parseInstant(request.createdAt()));
 
         return mapToResponse(repository.save(entity));
-    }
-
-    @Transactional(readOnly = true)
-    public List<SavedItineraryResponse> getAllSavedItineraries() {
-        return repository.findAllByOrderByCreatedAtDesc()
-                .stream()
-                .map(this::mapToResponse)
-                .toList();
-    }
-
-    @Transactional(readOnly = true)
-    public List<SavedItineraryResponse> getSavedItinerariesByConversationId(String conversationId) {
-        return repository.findByConversationIdOrderByCreatedAtDesc(conversationId)
-                .stream()
-                .map(this::mapToResponse)
-                .toList();
-    }
-
-    @Transactional(readOnly = true)
-    public Optional<SavedItineraryResponse> getSavedItineraryById(Long id) {
-        return repository.findById(id).map(this::mapToResponse);
-    }
-
-    @Transactional
-    public boolean deleteSavedItinerary(Long id) {
-        if (repository.existsById(id)) {
-            repository.deleteById(id);
-            return true;
-        }
-        return false;
     }
 
     private SavedItineraryResponse mapToResponse(SavedItinerary entity) {
