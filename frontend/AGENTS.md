@@ -29,7 +29,7 @@ No `any`, no synchronous `setState` in `useEffect`, no hardcoded localhost URLs 
   - Always maintain an `AbortController` instance.
   - Abort active streams when a user cancels or when the component unmounts.
 - **Session Isolation**:
-  - Always generate and pass a unique `conversationId` UUID per session to preserve chat memory isolation on the backend.
+  - Always generate and pass a unique `conversationId` UUID per generation; the backend uses it to save each itinerary as one row.
 
 ### 🚫 Forbidden Patterns (DO NOT)
 - **DO NOT duplicate Save buttons**: Ensure save-to-database actions are centralized in [`ItineraryOutputView`](app/components/itinerary/ItineraryOutputView.tsx) and [`ItineraryHistory`](app/components/ItineraryHistory.tsx).

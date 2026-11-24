@@ -122,14 +122,10 @@ public class AiConfig {
             JdbcTemplate jdbcTemplate,
             EmbeddingModel embeddingModel,
             EmbeddingProperties embeddingProperties,
-            @Value("${spring.ai.vectorstore.pgvector.dimensions:0}") int configuredDimensions,
-            @Value("${spring.ai.vectorstore.pgvector.index-type:}") String configuredIndexType,
-            @Value("${spring.ai.vectorstore.pgvector.table-name:}") String configuredTableName) {
+            @Value("${spring.ai.vectorstore.pgvector.index-type:}") String configuredIndexType) {
 
-        int dimensions = configuredDimensions > 0 ? configuredDimensions : embeddingProperties.getDimensions();
-        String tableName = (configuredTableName != null && !configuredTableName.isBlank())
-                ? configuredTableName.trim().toLowerCase()
-                : embeddingProperties.getEffectiveTableName();
+        int dimensions = embeddingProperties.getDimensions();
+        String tableName = embeddingProperties.getEffectiveTableName();
 
         PgVectorStore.PgIndexType indexType;
         if (configuredIndexType != null && !configuredIndexType.isBlank()) {

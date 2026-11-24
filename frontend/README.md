@@ -90,7 +90,7 @@ Real-time streaming is handled through a reactive pipeline:
 2. **Transfer**: The backend streams chunks as `text/event-stream` from `POST /api/itinerary/stream`.
 3. **Chunk Processing**: The frontend reads chunks via a `ReadableStreamDefaultReader` and `TextDecoder`, stripping SSE `data:` prefixes while collecting tokens.
 4. **Parsing**: `app/utils/itineraryParser.ts` continuously sanitizes raw text (stripping markdown code fences like ` ```json `), extracts valid JSON substrings, and attempts non-blocking progressive parse updates so cards render incrementally.
-5. **Session Isolation**: A unique `conversationId` UUID is generated per session (`crypto.randomUUID()`) and passed with each request, allowing Spring AI's multi-turn chat memory advisors to retain context without cross-user leakage.
+5. **Session Isolation**: A unique `conversationId` UUID is generated per session (`crypto.randomUUID()`) and passed with each request; saving the same itinerary again updates its database row instead of adding a duplicate.
 
 ## Testing & Quality Verification
 

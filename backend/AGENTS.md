@@ -4,7 +4,7 @@ This document defines the architectural rules, coding standards, and system inva
 
 ## 1. System Scope & Identity
 
-The backend is a reactive and RESTful travel itinerary service integrating Spring AI, PostgreSQL `pgvector`, and multi-turn chat memory advisors.
+The backend is a reactive and RESTful travel itinerary service integrating Spring AI, PostgreSQL `pgvector` and RAG retrieval advisors.
 
 ### Key Class & Configuration Map
 
@@ -13,9 +13,9 @@ The backend is a reactive and RESTful travel itinerary service integrating Sprin
 | **Modular Embedding Factory** | [`EmbeddingConfig`](src/main/java/com/yonglun/itineraryassistant/config/EmbeddingConfig.java) | Selects & instantiates the active `EmbeddingModel` based on configuration. |
 | **Embedding Properties** | [`EmbeddingProperties`](src/main/java/com/yonglun/itineraryassistant/config/EmbeddingProperties.java) | Config properties & dynamic vector table name generator. |
 | **AI & VectorStore Setup** | [`AiConfig`](src/main/java/com/yonglun/itineraryassistant/config/AiConfig.java) | Primary `ChatModel`, `ChatClient`, `PgVectorStore`, & `SimpleVectorStore` beans. |
-| **Itinerary Generation & SSE** | [`ItineraryService`](src/main/java/com/yonglun/itineraryassistant/service/ItineraryService.java) | RAG retrieval, chat memory integration, and SSE flux streaming. |
+| **Itinerary Generation & SSE** | [`ItineraryService`](src/main/java/com/yonglun/itineraryassistant/service/ItineraryService.java) | RAG retrieval, draft validation with one retry, and SSE flux streaming. |
 | **Knowledge & Ingestion** | [`IngestionService`](src/main/java/com/yonglun/itineraryassistant/service/IngestionService.java) | Ingests PDF/JSON/Text docs into isolated destination partitions. |
-| **Persistence CRUD** | [`SavedItineraryService`](src/main/java/com/yonglun/itineraryassistant/service/SavedItineraryService.java) | Saves, updates, and deletes generated itineraries. |
+| **Persistence** | [`SavedItineraryService`](src/main/java/com/yonglun/itineraryassistant/service/SavedItineraryService.java) | Saves a generated itinerary, updating the row for an existing `conversationId`. |
 | **Global Error Handling** | [`GlobalExceptionHandler`](src/main/java/com/yonglun/itineraryassistant/controller/GlobalExceptionHandler.java) | Uniform REST API error responses (`ApiErrorResponse`). |
 | **Application Config** | [`application.yaml`](src/main/resources/application.yaml) | Base datasource, model, and provider configuration. |
 

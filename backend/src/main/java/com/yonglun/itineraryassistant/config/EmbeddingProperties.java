@@ -12,7 +12,6 @@ public class EmbeddingProperties {
     private int dimensions = 3072;
     private String tableName;
     private OllamaProperties ollama = new OllamaProperties();
-    private OpenAiCompatibleProperties openaiCompatible = new OpenAiCompatibleProperties();
 
     public String getProvider() {
         return provider;
@@ -54,14 +53,6 @@ public class EmbeddingProperties {
         this.ollama = ollama;
     }
 
-    public OpenAiCompatibleProperties getOpenaiCompatible() {
-        return openaiCompatible;
-    }
-
-    public void setOpenaiCompatible(OpenAiCompatibleProperties openaiCompatible) {
-        this.openaiCompatible = openaiCompatible;
-    }
-
     public String getEffectiveTableName() {
         if (tableName != null && !tableName.isBlank()) {
             return tableName.trim().toLowerCase();
@@ -82,27 +73,6 @@ public class EmbeddingProperties {
 
         public void setBaseUrl(String baseUrl) {
             this.baseUrl = baseUrl;
-        }
-    }
-
-    public static class OpenAiCompatibleProperties {
-        private String baseUrl = "http://localhost:8000";
-        private String apiKey = "dummy-key";
-
-        public String getBaseUrl() {
-            return baseUrl;
-        }
-
-        public void setBaseUrl(String baseUrl) {
-            this.baseUrl = baseUrl;
-        }
-
-        public String getApiKey() {
-            return apiKey;
-        }
-
-        public void setApiKey(String apiKey) {
-            this.apiKey = apiKey;
         }
     }
 }

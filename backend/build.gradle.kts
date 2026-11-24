@@ -31,13 +31,10 @@ dependencies {
     // 2. Embedding Model Dependencies
     implementation("org.springframework.ai:spring-ai-starter-model-google-genai-embedding")
     implementation("org.springframework.ai:spring-ai-starter-model-ollama")
-    implementation("org.springframework.ai:spring-ai-openai")
+    implementation("org.springframework.ai:spring-ai-starter-model-openai")
 
     // 3. Vector Store: PgVector Store Core
     implementation("org.springframework.ai:spring-ai-pgvector-store")
-
-    // 4. Persistent chat memory (JDBC)
-    implementation("org.springframework.ai:spring-ai-starter-model-chat-memory-repository-jdbc")
 
     // 5. PDF Document Reader
     implementation("org.springframework.ai:spring-ai-pdf-document-reader")

@@ -21,6 +21,8 @@ spring:
         api-key: test-key
         embedding:
           api-key: test-key
+    openai:
+      api-key: test-key
 
 app:
   security:
