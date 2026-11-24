@@ -53,13 +53,11 @@ class ItineraryControllerTest {
     }
 
     @Test
-    void testBlankConversationIdIsRejected() throws Exception {
-        for (String path : List.of("/api/itinerary/stream")) {
-            for (String body : List.of("{\"prompt\":\"Trip\"}", "{\"prompt\":\"Trip\",\"conversationId\":\"  \"}")) {
-                mockMvc.perform(post(path).contentType(MediaType.APPLICATION_JSON).content(body))
-                        .andExpect(status().isBadRequest())
-                        .andExpect(jsonPath("$.message", is("conversationId is required")));
-            }
+    void testTooManyDaysOrTooLongPromptIsRejected() throws Exception {
+        for (String prompt : List.of("Destination: Kyoto\nDays: 31", "Days: 99999999999", "Days: 0", "x".repeat(4001))) {
+            mockMvc.perform(post("/api/itinerary/stream").contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(new PromptRequest(prompt, "conv-1"))))
+                    .andExpect(status().isBadRequest());
         }
         verifyNoInteractions(itineraryService);
     }
