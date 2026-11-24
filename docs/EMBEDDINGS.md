@@ -252,9 +252,6 @@ app:
     table-name: ${EMBEDDING_TABLE_NAME:} # Blank = auto vector_store_{provider}_{dimensions}
     ollama:
       base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
-    openai-compatible:
-      base-url: ${OPENAI_COMPAT_BASE_URL:http://localhost:8000}
-      api-key: ${OPENAI_COMPAT_API_KEY:dummy-key}
 ```
 
 ## 7. Verification & Search APIs

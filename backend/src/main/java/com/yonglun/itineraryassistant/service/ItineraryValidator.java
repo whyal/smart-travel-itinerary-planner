@@ -16,7 +16,7 @@ import java.util.regex.Pattern;
 @Component
 public class ItineraryValidator {
 
-    private static final Pattern DAYS_LINE = Pattern.compile("(?m)^Days:\\s*(\\d+)");
+    private static final Pattern DAYS_LINE = Pattern.compile("(?m)^Days:\\s*(\\d{1,9})");
     private static final List<String> REQUIRED_FIELDS = List.of("time", "location", "description", "gettingThere", "operatingHours", "durationMinutes", "travelMinutesFromPrevious");
     private static final Pattern CLOCK = Pattern.compile("(\\d{1,2}):(\\d{2})\\s*([AaPp][Mm])?");
     private static final int TIMING_TOLERANCE_MINUTES = 10;

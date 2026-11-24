@@ -77,7 +77,7 @@ backend/src/main/java/com/yonglun/itineraryassistant/
 ├── repository/
 │   └── SavedItineraryRepository.java# Spring Data JPA repository for saved itineraries
 └── service/
-    ├── ItineraryService.java        # RAG retrieval, chat memory integration, and SSE flux streaming
+    ├── ItineraryService.java        # RAG retrieval, draft validation with one retry, and SSE flux streaming
     ├── IngestionService.java        # Document parsing, token chunking, and idempotent vector ingestion
     └── SavedItineraryService.java   # CRUD business logic for saved itineraries
 ```
@@ -121,10 +121,7 @@ All endpoints are hosted under `/api`. For full request/response schemas, JSON p
 
 ### Itinerary Endpoints
 - `POST /api/itinerary/stream`: Reactive Server-Sent Events (SSE) token streaming for real-time UI rendering.
-- `GET /api/itineraries`: Retrieve all saved itineraries.
 - `POST /api/itineraries`: Save an itinerary to PostgreSQL.
-- `GET /api/itineraries/{id}`: Retrieve a saved itinerary by ID.
-- `DELETE /api/itineraries/{id}`: Delete a saved itinerary by ID.
 
 ### Knowledge Base & Ingestion Endpoints (`/api/knowledge`)
 - `POST /api/knowledge/documents`: Ingest structured travel documents with metadata.

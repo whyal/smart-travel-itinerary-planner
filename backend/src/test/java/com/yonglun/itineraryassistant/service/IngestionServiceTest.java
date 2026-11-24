@@ -710,7 +710,7 @@ class IngestionServiceTest {
         }
 
         @Test
-        @DisplayName("Unhappy path: Malformed JSON throws Jackson/IO Exception")
+        @DisplayName("Unhappy path: Malformed JSON throws IllegalArgumentException so the upload returns 400")
         void testIngestFile_MalformedJson_ThrowsException() {
             MockMultipartFile invalidJsonFile = new MockMultipartFile(
                     "file",
@@ -719,7 +719,7 @@ class IngestionServiceTest {
                     "{ invalid json content ]".getBytes(StandardCharsets.UTF_8)
             );
 
-            assertThrows(Exception.class, () -> ingestionService.ingestFile(invalidJsonFile, "Tokyo"));
+            assertThrows(IllegalArgumentException.class, () -> ingestionService.ingestFile(invalidJsonFile, "Tokyo"));
             verifyNoInteractions(vectorStore);
         }
 

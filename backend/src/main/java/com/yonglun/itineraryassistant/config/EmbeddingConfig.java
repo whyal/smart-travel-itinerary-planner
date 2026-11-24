@@ -58,10 +58,7 @@ public class EmbeddingConfig {
                     log.info("Using autoconfigured OpenAiEmbeddingModel for '{}'", modelName);
                     return existing;
                 }
-                String baseUrl = properties.getOpenaiCompatible().getBaseUrl();
-                log.info("Configuring OpenAI-compatible embedding provider for model '{}' at base URL '{}'", modelName, baseUrl);
-                throw new IllegalStateException("OpenAiEmbeddingModel not autoconfigured. Please configure spring.ai.openai.base-url="
-                        + baseUrl + " and spring.ai.openai.api-key=" + properties.getOpenaiCompatible().getApiKey());
+                throw new IllegalStateException("OpenAiEmbeddingModel is not available. Please verify spring.ai.openai.base-url and spring.ai.openai.api-key.");
             }
 
             case "google":

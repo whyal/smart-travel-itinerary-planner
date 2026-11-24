@@ -105,39 +105,17 @@ class SavedItineraryServiceTest {
     }
 
     @Test
-    void testGetAllSavedItineraries() {
-        SavedItinerary entity = new SavedItinerary(
-                1L, "conv-1", "Paris", 3, "{}", "{}", "raw", Instant.now()
-        );
-        when(repository.findAllByOrderByCreatedAtDesc()).thenReturn(List.of(entity));
+    void testSavingSameConversationTwiceUpdatesExistingRow() {
+        SavedItinerary existing = new SavedItinerary(7L, "session-1", "Tokyo", 3, null, null, "old", Instant.now());
+        when(repository.findFirstByConversationIdOrderByIdDesc("session-1")).thenReturn(Optional.of(existing));
+        when(repository.save(any(SavedItinerary.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        List<SavedItineraryResponse> result = service.getAllSavedItineraries();
+        SavedItineraryResponse response = service.saveItinerary(
+                new SaveItineraryRequest("session-1", "Tokyo", 4, null, null, "new", null));
 
-        assertThat(result).hasSize(1);
-        assertThat(result.get(0).destination()).isEqualTo("Paris");
-    }
-
-    @Test
-    void testGetSavedItineraryById() {
-        SavedItinerary entity = new SavedItinerary(
-                1L, "conv-1", "Paris", 3, "{}", "{}", "raw", Instant.now()
-        );
-        when(repository.findById(1L)).thenReturn(Optional.of(entity));
-
-        Optional<SavedItineraryResponse> result = service.getSavedItineraryById(1L);
-
-        assertThat(result).isPresent();
-        assertThat(result.get().destination()).isEqualTo("Paris");
-    }
-
-    @Test
-    void testDeleteSavedItinerary() {
-        when(repository.existsById(1L)).thenReturn(true);
-
-        boolean deleted = service.deleteSavedItinerary(1L);
-
-        assertThat(deleted).isTrue();
-        verify(repository, times(1)).deleteById(1L);
+        assertThat(response.id()).isEqualTo(7L);
+        assertThat(response.rawText()).isEqualTo("new");
+        assertThat(response.daysCount()).isEqualTo(4);
     }
 
     @Test
@@ -154,9 +132,10 @@ class SavedItineraryServiceTest {
     @Test
     void testReadReturnsNullItineraryForCorruptStoredJson() {
         SavedItinerary corrupt = new SavedItinerary(1L, "s1", "Tokyo", 1, null, "{not json", "raw", Instant.now());
-        when(repository.findById(1L)).thenReturn(Optional.of(corrupt));
+        when(repository.save(any(SavedItinerary.class))).thenReturn(corrupt);
 
-        SavedItineraryResponse response = service.getSavedItineraryById(1L).orElseThrow();
+        SavedItineraryResponse response = service.saveItinerary(
+                new SaveItineraryRequest("s1", "Tokyo", 1, null, null, "raw", null));
 
         assertThat(response.itinerary()).isNull();
         assertThat(response.destination()).isEqualTo("Tokyo");

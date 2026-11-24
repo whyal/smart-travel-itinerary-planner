@@ -1,5 +1,6 @@
 package com.yonglun.itineraryassistant.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -119,6 +120,8 @@ public class IngestionService {
             JsonNode root;
             try (InputStream is = file.getInputStream()) {
                 root = objectMapper.readTree(is);
+            } catch (JsonProcessingException e) {
+                throw new IllegalArgumentException("Malformed JSON: " + e.getOriginalMessage());
             }
 
             if (root.isArray()) {

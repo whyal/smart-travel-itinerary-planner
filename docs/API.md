@@ -13,10 +13,7 @@ Every `/api/**` request must send an `X-Api-Key` header matching the backend `AP
 | Category | Method | Path | Description |
 | :--- | :--- | :--- | :--- |
 | **Itinerary** | `POST` | `/api/itinerary/stream` | Server-Sent Events (SSE) token streaming for real-time progressive UI rendering. |
-| **Persistence** | `GET` | `/api/itineraries` | Retrieve all saved itineraries. |
 | **Persistence** | `POST` | `/api/itineraries` | Save an itinerary and its metadata to PostgreSQL. |
-| **Persistence** | `GET` | `/api/itineraries/{id}` | Retrieve a saved itinerary by its ID. |
-| **Persistence** | `DELETE` | `/api/itineraries/{id}` | Delete a saved itinerary by its ID. |
 | **Knowledge** | `POST` | `/api/knowledge/documents` | Ingest structured travel documents with metadata into vector space. |
 | **Knowledge** | `POST` | `/api/knowledge/articles` | Ingest raw travel text/articles into vector space. |
 | **Knowledge** | `POST` | `/api/knowledge/upload` | Multipart file upload (`.pdf`, `.json`, `.txt`, `.md`). |
@@ -43,8 +40,8 @@ Accept: text/event-stream
 }
 ```
 
-- `prompt` *(string, required)*: User prompt containing destination and preferences. Missing or blank returns `400`.
-- `conversationId` *(string, required)*: UUID tracking multi-turn chat history, stored in the database. Missing or blank returns `400`.
+- `prompt` *(string, required)*: User prompt containing destination and preferences, at most 4000 characters. A `Days: N` line must be between 1 and 30. Missing, blank, too long or out-of-range returns `400`.
+- `conversationId` *(string, optional)*: Session UUID sent by the frontend. Generation does not use it; it identifies the itinerary when saved.
 
 #### Response Stream (`200 OK`)
 ```http
@@ -66,37 +63,9 @@ curl -N -X POST "http://localhost:8080/api/itinerary/stream" \
 
 ## 2. Saved Itineraries (Persistence) Endpoints
 
-### A. List All Saved Itineraries (`GET /api/itineraries`)
+### A. Save Itinerary (`POST /api/itineraries`)
 
-Returns all itineraries stored in the database, ordered by creation date descending.
-
-#### Response (`200 OK`)
-```json
-[
-  {
-    "id": 1,
-    "conversationId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-    "destination": "Kyoto",
-    "daysCount": 3,
-    "formData": {
-      "destination": "Kyoto",
-      "days": 3,
-      "pace": "moderate",
-      "budget": "medium",
-      "interests": ["culture", "food"],
-      "notes": "Travelling with a toddler",
-      "startDate": "2026-12-05"
-    },
-    "itinerary": { ... },
-    "rawText": "...",
-    "createdAt": "2026-11-02T12:00:00Z"
-  }
-]
-```
-
-### B. Save Itinerary (`POST /api/itineraries`)
-
-Persists a generated itinerary to PostgreSQL.
+Persists a generated itinerary to PostgreSQL. Saving again with the same `conversationId` updates that row instead of adding a new one. There is no endpoint to list or delete saved itineraries, because the API key is public (see [Authentication](#authentication)).
 
 #### Request Body
 ```json
@@ -121,14 +90,6 @@ Persists a generated itinerary to PostgreSQL.
 
 #### Response (`200 OK`)
 Returns the persisted entity with its generated `id`.
-
-### C. Get Itinerary by ID (`GET /api/itineraries/{id}`)
-
-Retrieves a single saved itinerary. Returns `404 Not Found` if the ID does not exist.
-
-### D. Delete Itinerary (`DELETE /api/itineraries/{id}`)
-
-Deletes the specified saved itinerary. Returns `204 No Content` on success.
 
 ## 3. Knowledge Base & Vector Store Endpoints
 
